@@ -6,16 +6,16 @@ import torch.nn.functional as F
 class ViewpointAutoEncoder(pl.LightningModule):
     def __init__(self, input_dim, encoding_dim):
         super().__init__()
-        self.encoder = nn.Sequential(nn.Linear(input_dim, 512),
+        self.encoder = nn.Sequential(nn.Linear(input_dim, 128),
                                      nn.ReLU(),
-                                     nn.Linear(512, 256),
+                                     nn.Linear(128, 128),
                                      nn.ReLU(),
-                                     nn.Linear(256, encoding_dim))
-        self.decoder = nn.Sequential(nn.Linear(encoding_dim, 256),
+                                     nn.Linear(128, encoding_dim))
+        self.decoder = nn.Sequential(nn.Linear(encoding_dim, 128),
                                      nn.ReLU(),
-                                     nn.Linear(256, 512),
+                                     nn.Linear(128, 128),
                                      nn.ReLU(),
-                                     nn.Linear(512, input_dim))
+                                     nn.Linear(128, input_dim))
 
     def training_step(self, batch, batch_idx):
         # training_step defines the train loop.

@@ -12,7 +12,7 @@ class ViewpointDataset(Dataset):
         viewpoint = torch.Tensor(self.viewpoints[idx])
         error = torch.Tensor(self.errors[idx])
 
-        return viewpoint.flatten(), error
+        return viewpoint, error
 
     def __len__(self):
         return self.errors.shape[0]

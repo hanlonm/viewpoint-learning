@@ -16,7 +16,7 @@ def main():
     num_points = hf.attrs["num_points"]
     num_angles = hf.attrs["num_angles"]
 
-    histogram_data = hf["histogram_data"][:]
+    histogram_data = hf["encodings"][:]
     errors = hf["errors"][:]
     histogram_data = histogram_data.reshape(
         (num_points * num_angles, histogram_data.shape[2]))
@@ -44,11 +44,13 @@ def main():
     predictions = automl.predict(X_test)
     probas = automl.predict_proba(X_test)
     print("Accuracy score:", accuracy_score(y_test, predictions))
+    predictions = automl.predict(X_train)
+    print("Accuracy score:", accuracy_score(y_train, predictions))
     print(np.sum(y_test))
     # save model
-    with open('viewpoint-classifier.pkl', 'wb') as f:
-        pickle.dump(automl, f)
-    print()
+    # with open('viewpoint-classifier.pkl', 'wb') as f:
+    #     pickle.dump(automl, f)
+    # print()
 
 if __name__ == '__main__':
     main()
