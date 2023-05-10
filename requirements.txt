@@ -1,0 +1,5 @@
+lightning
+numpy
+h5py
+auto-sklearn
+tensorboard
