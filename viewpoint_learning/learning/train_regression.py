@@ -1,6 +1,6 @@
-from dataloader import ClassifierDataset
+from dataloader import RegressionDataset
 from torch.utils.data import DataLoader, random_split
-from MLP_classifier import ViewpointClassifier
+from regression import ViewpointRegressor
 import numpy as np
 import torch
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -39,34 +39,25 @@ px_v_hist=histogram_data[:,136:146]
 
 histogram_data = np.hstack((np.array([range_1]).T, np.array([range_2]).T, min_dist_hist, max_dist_hist, min_ang_hist, max_ang_hist, min_ang_diff_hist, 
                             max_ang_diff_hist,heatmaps,px_u_hist, px_v_hist))
-input_config = "all_input"
-# histogram_data = np.hstack((min_dist_hist, max_dist_hist, min_ang_hist, max_ang_hist,heatmaps,px_u_hist, px_v_hist))
+input_config = "all_info"
+
 errors: np.ndarray = errors.reshape((num_points * num_angles, errors.shape[2]))
 e_trans = np.array([np.linalg.norm(errors[:,:3], axis=1)]).T
 e_rot = np.array([errors[:,3]]).T
 
 errors = np.hstack((e_trans, e_rot))
+trans_errors = errors[:,0] 
 
-labels = np.logical_and(errors[:, 0] < 0.05, errors[:, 1] < 0.5)
-labels = labels.astype(int)
-labels = np.array([labels]).T
+max_error = 5.0
+trans_errors = np.clip(trans_errors, None, max_error)
 
-pos = np.argwhere(labels==1)[:,0]
-neg = np.argwhere(labels==0)[:,0]
-pos = np.random.choice(pos, 1000)
-neg = np.random.choice(neg, 1000)
+trans_errors = standardize(trans_errors, max_error)
+trans_errors = np.array([trans_errors]).T
+print(np.mean(trans_errors))
+print(np.std(trans_errors))
 
-pos_hist = histogram_data[pos]
-neg_hist = histogram_data[neg]
-pos_labels = labels[pos]
-neg_labels = labels[neg]
 
-histogram_data = np.vstack((pos_hist, neg_hist))
-labels = np.vstack((pos_labels,neg_labels))
-
-tot = np.sum(labels)
-
-dataset = ClassifierDataset(histogram_data, labels)
+dataset = RegressionDataset(histogram_data, trans_errors)
 
 
 
@@ -81,12 +72,12 @@ train_set, valid_set = random_split(dataset, [train_set_size, valid_set_size], g
 train_loader = DataLoader(train_set, 8, shuffle=True, num_workers=0)
 val_loader = DataLoader(valid_set, 8, shuffle=False, num_workers=0)
 
-for batch, data in enumerate(train_loader):
-    features, label = data
+# for batch, data in enumerate(train_loader):
+#     features, label = data
 
-checkpoint_callback = ModelCheckpoint(save_top_k=2, monitor="acc", mode="max",save_weights_only=False)
+checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="acc", mode="min",save_weights_only=False)
 
-tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"Classifier/{input_config}")
-model = ViewpointClassifier(histogram_data.shape[1], metadata)
+tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"Regression/{input_config}")
+model = ViewpointRegressor(histogram_data.shape[1], max_error=max_error)
 trainer = pl.Trainer(max_epochs=500, logger=tb_logger, callbacks=[checkpoint_callback])
 trainer.fit(model, train_loader, val_loader)

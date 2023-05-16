@@ -4,12 +4,13 @@ import pytorch_lightning as pl
 import torch.nn.functional as F
 from torch import nn
 from torchmetrics.functional import accuracy
+from torchmetrics.regression.mae import MeanAbsoluteError
 
 
 
-# define the LightningModule
-class ViewpointClassifier(pl.LightningModule):
-    def __init__(self, input_dim, meta_data):
+
+class ViewpointRegressor(pl.LightningModule):
+    def __init__(self, input_dim, max_error):
         super().__init__()
         self.model = nn.Sequential(nn.Linear(input_dim, 128),
                                    nn.ReLU(),
@@ -24,12 +25,13 @@ class ViewpointClassifier(pl.LightningModule):
                                    nn.ReLU(),
                                    nn.Linear(16, 8),
                                    nn.ReLU(),
-                                   nn.Linear(8, 1),
-                                   nn.Sigmoid())
+                                   nn.Linear(8, 1))
         self.trainable_parameters = self.model.parameters()
 
-        self.loss = nn.BCELoss()
-        self.meta_data = meta_data
+        self.loss = nn.SmoothL1Loss(reduction="mean")
+        self.acc_metric = MeanAbsoluteError()
+
+        self.max_error = max_error
 
     def forward(self, x):
         out = self.model(x)
@@ -50,9 +52,11 @@ class ViewpointClassifier(pl.LightningModule):
         # this is the validation loop
         x, y = batch
         y_hat = self.model(x)
-        test_loss = self.loss(y_hat, y)
-        self.log("val_loss", test_loss)
-        acc = accuracy(y_hat, y,task='binary')
+        val_loss = self.loss(y_hat, y)
+        self.log("val_loss", val_loss)
+        gt = y * self.max_error
+        pred =  y_hat * self.max_error
+        acc = self.acc_metric(pred, gt)
         self.log("acc", acc, prog_bar=True)
 
     def configure_optimizers(self):

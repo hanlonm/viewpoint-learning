@@ -32,3 +32,18 @@ class ClassifierDataset(Dataset):
 
     def __len__(self):
         return self.labels.shape[0]
+    
+class RegressionDataset(Dataset):
+    def __init__(self, viewpoints, values):
+        super(RegressionDataset, self).__init__()
+        self.viewpoints = viewpoints
+        self.values = values
+
+    def __getitem__(self, idx):
+        viewpoint = torch.Tensor(self.viewpoints[idx])
+        value = torch.Tensor(self.values[idx])
+
+        return viewpoint, value
+
+    def __len__(self):
+        return self.values.shape[0]
