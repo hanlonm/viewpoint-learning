@@ -9,7 +9,7 @@ from torchmetrics.functional import accuracy
 
 # define the LightningModule
 class ViewpointClassifier(pl.LightningModule):
-    def __init__(self, input_dim, meta_data):
+    def __init__(self, input_dim):
         super().__init__()
         self.model = nn.Sequential(nn.Linear(input_dim, 128),
                                    nn.ReLU(),
@@ -29,7 +29,6 @@ class ViewpointClassifier(pl.LightningModule):
         self.trainable_parameters = self.model.parameters()
 
         self.loss = nn.BCELoss()
-        self.meta_data = meta_data
 
     def forward(self, x):
         out = self.model(x)
@@ -54,6 +53,15 @@ class ViewpointClassifier(pl.LightningModule):
         self.log("val_loss", test_loss)
         acc = accuracy(y_hat, y,task='binary')
         self.log("acc", acc, prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        # this is the validation loop
+        x, y = batch
+        y_hat = self.model(x)
+        test_loss = self.loss(y_hat, y)
+        self.log("test_loss", test_loss)
+        acc = accuracy(y_hat, y,task='binary')
+        self.log("test_acc", acc, prog_bar=True)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.trainable_parameters, lr=1e-3)

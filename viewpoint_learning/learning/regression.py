@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch import nn
 from torchmetrics.functional import accuracy
 from torchmetrics.regression.mae import MeanAbsoluteError
-
+from torchmetrics.regression.r2 import R2Score
 
 
 
@@ -29,7 +29,9 @@ class ViewpointRegressor(pl.LightningModule):
         self.trainable_parameters = self.model.parameters()
 
         self.loss = nn.SmoothL1Loss(reduction="mean")
+        #self.loss = nn.MSELoss()
         self.acc_metric = MeanAbsoluteError()
+        self.r2_score = R2Score()
 
         self.max_error = max_error
 
@@ -58,6 +60,21 @@ class ViewpointRegressor(pl.LightningModule):
         pred =  y_hat * self.max_error
         acc = self.acc_metric(pred, gt)
         self.log("acc", acc, prog_bar=True)
+        r2 = self.r2_score(pred, gt)
+        self.log("r2", r2, prog_bar=True)
+
+    def test_step(self, batch, batch_idx):
+        # this is the test loop
+        x, y = batch
+        y_hat = self.model(x)
+        test_loss = self.loss(y_hat, y)
+        self.log("test_loss", test_loss)
+        gt = y * self.max_error
+        pred =  y_hat * self.max_error
+        acc = self.acc_metric(pred, gt)
+        self.log("test_acc", acc, prog_bar=True)
+        r2 = self.r2_score(pred, gt)
+        self.log("test_r2", r2, prog_bar=True)    
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.trainable_parameters, lr=1e-3)

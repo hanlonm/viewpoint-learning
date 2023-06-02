@@ -7,77 +7,81 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 import h5py
+import matplotlib.pyplot as plt
 
-from utils import normalize, standardize
+
+from utils import normalize, standardize, pre_process, remove_nan_rows, create_dataset
 
 
-hf = h5py.File("/local/home/hanlonm/mt-matthew/data/00195_HL_SPA_NN/test-2000.h5", "r+")
+hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/0601_100_occ.h5", "r+")
+#hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
 print(hf.keys())
-histogram_data: np.ndarray = hf["histogram_data"][:]
 num_points = hf.attrs["num_points"]
 num_angles = hf.attrs["num_angles"]
-errors = hf["errors"][:]
-histogram_data = histogram_data.reshape(
-    (num_points * num_angles, histogram_data.shape[2]))
 
+input_config = "all_info_occ"
 
-# Ablation
-ranges = histogram_data[:,:2]
-range_1 = standardize(histogram_data[:, 0], 2000)
-range_2 = standardize(histogram_data[:, 1], 2000)
-min_dist_hist = histogram_data[:,2:12]
-max_dist_hist = histogram_data[:,12:22]
-min_ang_hist =histogram_data[:,22:32]
-max_ang_hist = histogram_data[:,32:42]
-min_ang_diff_hist =histogram_data[:,42:52]
-max_ang_diff_hist =histogram_data[:,52:62]
-heatmaps = histogram_data[:,62:126]
-heatmaps = standardize(histogram_data[:,62:126], 1000)
-px_u_hist=histogram_data[:,126:136]
-px_v_hist=histogram_data[:,136:146]
-
-
-histogram_data = np.hstack((np.array([range_1]).T, np.array([range_2]).T, min_dist_hist, max_dist_hist, min_ang_hist, max_ang_hist, min_ang_diff_hist, 
-                            max_ang_diff_hist,heatmaps,px_u_hist, px_v_hist))
-input_config = "all_info"
-
-errors: np.ndarray = errors.reshape((num_points * num_angles, errors.shape[2]))
-e_trans = np.array([np.linalg.norm(errors[:,:3], axis=1)]).T
-e_rot = np.array([errors[:,3]]).T
-
-errors = np.hstack((e_trans, e_rot))
-trans_errors = errors[:,0] 
+train_environments = ["00067", "00596", "00638", "00700"]
+#train_environments = ["00596"]
+test_environments = ["00195", "00654"]
 
 max_error = 5.0
-trans_errors = np.clip(trans_errors, None, max_error)
-
-trans_errors = standardize(trans_errors, max_error)
-trans_errors = np.array([trans_errors]).T
-print(np.mean(trans_errors))
-print(np.std(trans_errors))
+train_histograms, train_trans_errors, train_rot_errors = create_dataset(hf, train_environments, max_error)
+test_histograms, test_trans_errors, test_rot_errors = create_dataset(hf, test_environments, max_error)
 
 
-dataset = RegressionDataset(histogram_data, trans_errors)
 
+# Compute the histogram
+hist, bin_edges = np.histogram(train_trans_errors, bins=100)
+non_empty_bins = hist > 0
+hist = hist[non_empty_bins]
+bin_edges = bin_edges[:-1][non_empty_bins] 
+num_bins = len(bin_edges)-1
+
+samples_per_bin = int(train_trans_errors.shape[0]/num_bins)
+
+# Assign each sample to its corresponding bin
+bin_indices = np.digitize(train_trans_errors, bin_edges, True).flatten()
+# Create a dictionary to store samples for each bin
+bin_samples = {bin_num: [] for bin_num in range(1, len(bin_edges))}
+
+idxs = []
+for i in range(1, len(bin_edges)):
+    idx = np.argwhere(bin_indices == i)[:,0]
+    # if idx.size < 1:
+    #     continue
+    idx = np.random.choice(idx, samples_per_bin)
+    idxs.append(idx)
+
+idxs = np.concatenate(idxs)
+_ = plt.hist(train_trans_errors[idxs], bins=num_bins)
+plt.show()
+train_histograms = train_histograms[idxs]
+train_trans_errors = train_trans_errors[idxs]
+
+train_dataset = RegressionDataset(train_histograms, train_trans_errors)
+test_dataset = RegressionDataset(test_histograms, test_trans_errors)
 
 
 # use 10% of training data for validation
-train_set_size = int(len(dataset) * 0.9)
-valid_set_size = len(dataset) - train_set_size
+train_set_size = int(len(train_dataset) * 0.9)
+valid_set_size = len(train_dataset) - train_set_size
 
 # split the train set into two
 seed = torch.Generator().manual_seed(42)
-train_set, valid_set = random_split(dataset, [train_set_size, valid_set_size], generator=seed)
+train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size], generator=seed)
 
 train_loader = DataLoader(train_set, 8, shuffle=True, num_workers=0)
 val_loader = DataLoader(valid_set, 8, shuffle=False, num_workers=0)
+test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
 
 # for batch, data in enumerate(train_loader):
 #     features, label = data
 
-checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="acc", mode="min",save_weights_only=False)
+checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="acc", mode="min",save_weights_only=True)
 
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"Regression/{input_config}")
-model = ViewpointRegressor(histogram_data.shape[1], max_error=max_error)
-trainer = pl.Trainer(max_epochs=500, logger=tb_logger, callbacks=[checkpoint_callback])
+model = ViewpointRegressor(train_histograms.shape[1], max_error=max_error)
+trainer = pl.Trainer(max_epochs=200, logger=tb_logger, callbacks=[checkpoint_callback])
 trainer.fit(model, train_loader, val_loader)
+trainer.test(dataloaders=test_loader, ckpt_path="best")
