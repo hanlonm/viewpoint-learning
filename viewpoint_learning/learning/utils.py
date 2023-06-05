@@ -69,3 +69,36 @@ def create_dataset(hf, environments, max_error):
 
     return histogram_data, trans_errors, e_rot
 
+def create_transformer_dataset(hf, environments, max_error):
+    inputs = []
+    errors = []
+    for environment in environments:
+        environment_data = hf[environment]
+        print(environment_data.keys())
+        data = environment_data["token_data"][:]
+        new_data = np.zeros((data.shape[0], 1024,80))
+        for i, v in enumerate(data):
+            new_data[i] = np.hstack((v, np.zeros((1024,7))))
+
+        inputs.append(new_data)
+        errors.append(environment_data["errors"][:])
+        
+    token_data = np.vstack(inputs)
+    # token_data, nan_rows = remove_nan_rows(token_data)
+    errors = np.vstack(errors)
+    # errors = errors[~nan_rows]
+    # token_data = pre_process(token_data)
+
+    e_trans = np.array([np.linalg.norm(errors[:,:3], axis=1)]).T
+    e_rot = np.array([errors[:,3]]).T
+
+    errors = np.hstack((e_trans, e_rot))
+    trans_errors = errors[:,0] 
+
+    trans_errors = np.clip(trans_errors, None, max_error)
+
+    trans_errors = standardize(trans_errors, max_error)
+    trans_errors = np.array([trans_errors]).T
+
+    return token_data, trans_errors, e_rot
+
