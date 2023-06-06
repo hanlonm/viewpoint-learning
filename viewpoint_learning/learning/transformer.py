@@ -66,7 +66,7 @@ class ViewpointTransformer(nn.Module):
 
 
         # Layers/Networks
-        # self.input_layer = nn.Linear(num_channels * (patch_size**2), embed_dim)
+        self.input_layer = nn.Linear(73, embed_dim)
         self.transformer = nn.Sequential(
             *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers))
         )
@@ -79,7 +79,61 @@ class ViewpointTransformer(nn.Module):
     def forward(self, x:torch.Tensor):
         # Preprocess input
         B, T, _ = x.shape
-        # x = self.input_layer(x)
+        x = self.input_layer(x)
+
+        # Add CLS token
+        cls_token = self.cls_token.repeat(B, 1, 1)
+        x = torch.cat([cls_token, x], dim=1)
+
+        # Apply Transforrmer
+        x = self.dropout(x)
+        x = x.transpose(0, 1)
+        x = self.transformer(x)
+
+        # Perform classification prediction
+        cls = x[0]
+        out = self.mlp_head(cls)
+        return out
+    
+    
+class ViewpointTransformerReg(nn.Module):
+    def __init__(
+        self,
+        embed_dim,
+        hidden_dim,
+        num_heads,
+        num_layers,
+        dropout=0.0,
+    ):
+        """
+        Inputs:
+            embed_dim - Dimensionality of the input feature vectors to the Transformer
+            hidden_dim - Dimensionality of the hidden layer in the feed-forward networks
+                         within the Transformer
+            num_heads - Number of heads to use in the Multi-Head Attention block
+            num_layers - Number of layers to use in the Transformer
+            num_patches - Maximum number of patches an image can have
+            dropout - Amount of dropout to apply in the feed-forward network and
+                      on the input encoding
+        """
+        super().__init__()
+
+
+        # Layers/Networks
+        self.input_layer = nn.Linear(73, embed_dim)
+        self.transformer = nn.Sequential(
+            *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers))
+        )
+        self.mlp_head = nn.Sequential(nn.LayerNorm(embed_dim), nn.Linear(embed_dim, 1))
+        self.dropout = nn.Dropout(dropout)
+
+        # Parameters/Embeddings
+        self.cls_token = nn.Parameter(torch.randn(1, 1, embed_dim))
+
+    def forward(self, x:torch.Tensor):
+        # Preprocess input
+        B, T, _ = x.shape
+        x = self.input_layer(x)
 
         # Add CLS token
         cls_token = self.cls_token.repeat(B, 1, 1)
@@ -103,7 +157,7 @@ class ViT(pl.LightningModule):
         self.model = ViewpointTransformer(**model_kwargs)
         # self.example_input_array = next(iter(train_loader))[0]
 
-        self.acc_metric = MeanAbsoluteError()
+        #self.acc_metric = MeanAbsoluteError()
         self.r2_score = R2Score()
 
         self.loss = nn.BCELoss()
@@ -132,6 +186,55 @@ class ViT(pl.LightningModule):
         self.log("%s_loss" % mode, loss)
         self.log("%s_acc" % mode, acc, prog_bar=True)
         # self.log("%s_r2" % mode, r2)
+        return loss
+
+    def training_step(self, batch, batch_idx):
+        loss = self._calculate_loss(batch, mode="train")
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        self._calculate_loss(batch, mode="val")
+
+    def test_step(self, batch, batch_idx):
+        self._calculate_loss(batch, mode="test")
+
+
+class ViTReg(pl.LightningModule):
+    def __init__(self, model_kwargs, lr):
+        super().__init__()
+        self.save_hyperparameters()
+        self.model = ViewpointTransformerReg(**model_kwargs)
+        # self.example_input_array = next(iter(train_loader))[0]
+
+        self.acc_metric = MeanAbsoluteError()
+        self.r2_score = R2Score()
+
+        self.loss = nn.SmoothL1Loss(reduction="mean")
+
+
+
+    def forward(self, x):
+        return self.model(x)
+
+    def configure_optimizers(self):
+        optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
+        return [optimizer], [lr_scheduler]
+
+    def _calculate_loss(self, batch, mode="train"):
+        tokens, labels = batch
+        preds = self.model(tokens)
+        # print(preds)
+        # print(labels)
+        loss = self.loss(preds, labels)
+        # acc = (preds.argmax(dim=-1) == labels).float().mean()
+        acc = self.acc_metric(preds, labels)
+        # acc = self.acc_metric(preds, labels)
+        r2 = self.r2_score(preds, labels)
+
+        self.log("%s_loss" % mode, loss)
+        self.log("%s_acc" % mode, acc, prog_bar=True)
+        self.log("%s_r2" % mode, r2)
         return loss
 
     def training_step(self, batch, batch_idx):

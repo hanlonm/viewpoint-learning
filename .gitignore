@@ -164,4 +164,6 @@ Classifier/
 AutoEncoder/
 Regression/
 Transformer/
+TransformerReg/
+TransformerVar/
 *.pkl

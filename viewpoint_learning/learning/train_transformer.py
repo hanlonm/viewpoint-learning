@@ -8,11 +8,12 @@ import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
 import h5py
 import matplotlib.pyplot as plt
+from torch.utils.data import ConcatDataset
 
 
-from utils import normalize, standardize, pre_process, remove_nan_rows, create_transformer_dataset
+from utils import normalize, standardize, pre_process, remove_nan_rows, create_transformer_dataset, create_variable_transformer_dataset
 
-hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_1.h5", "r+")
+hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_5_var.h5", "r+")
 #hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
 print(hf.keys())
 num_points = hf.attrs["num_points"]
@@ -22,10 +23,14 @@ input_config = "token_1024"
 
 train_environments = ["00067", "00596", "00638", "00700"]
 test_environments = ["00195", "00654"]
+# train_environments = ["00067", "00596", "00638", "00700", "00654"]
+# test_environments = ["00195"]
 
 max_error = 5.0
-train_tokens, train_trans_errors, train_rot_errors = create_transformer_dataset(hf, train_environments, max_error)
-test_tokens, test_trans_errors, test_rot_errors = create_transformer_dataset(hf, test_environments, max_error)
+# train_tokens, train_trans_errors, train_rot_errors = create_transformer_dataset(hf, train_environments, max_error)
+# test_tokens, test_trans_errors, test_rot_errors = create_transformer_dataset(hf, test_environments, max_error)
+train_tokens, train_trans_errors, train_rot_errors = create_variable_transformer_dataset(hf, train_environments, max_error)
+test_tokens, test_trans_errors, test_rot_errors = create_variable_transformer_dataset(hf, test_environments, max_error)
 
 train_errors = np.hstack((train_trans_errors, train_rot_errors))
 train_labels = np.logical_and((train_errors[:, 0]*max_error) < 0.05, train_errors[:, 1] < 0.5)
@@ -39,15 +44,28 @@ test_labels = np.array([test_labels]).T
 
 pos = np.argwhere(train_labels==1)[:,0]
 neg = np.argwhere(train_labels==0)[:,0]
-pos = np.random.choice(pos, 400)
-neg = np.random.choice(neg, 400)
+pos = np.random.choice(pos, 4000)
+neg = np.random.choice(neg, 4000)
+
+test_pos = np.argwhere(test_labels==1)[:,0]
+test_neg = np.argwhere(test_labels==0)[:,0]
+test_pos = np.random.choice(test_pos, 1000)
+test_neg = np.random.choice(test_neg, 1000)
+test_pos_toks = test_tokens[test_pos]
+test_neg_toks = test_tokens[test_neg]
+test_pos_labels = test_labels[test_pos]
+test_neg_labels = test_labels[test_neg]
+test_tokens = np.concatenate((test_pos_toks, test_neg_toks))
+test_labels = np.vstack((test_pos_labels, test_neg_labels))
+
 
 pos_toks = train_tokens[pos]
 neg_toks = train_tokens[neg]
 pos_labels = train_labels[pos]
 neg_labels = train_labels[neg]
 
-input_data = np.vstack((pos_toks, neg_toks))
+# input_data = np.vstack((pos_toks, neg_toks))
+input_data = np.concatenate((pos_toks, neg_toks))
 train_labels = np.vstack((pos_labels, neg_labels))
 
 tot = np.sum(train_labels)
@@ -64,23 +82,25 @@ valid_set_size = len(train_dataset) - train_set_size
 seed = torch.Generator().manual_seed(42)
 train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size], generator=seed)
 
-train_loader = DataLoader(train_set, 8, shuffle=True, num_workers=0)
-val_loader = DataLoader(valid_set, 8, shuffle=False, num_workers=0)
-test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
+val_test_set = ConcatDataset([valid_set, test_dataset])
+
+train_loader = DataLoader(train_set, 1, shuffle=True, num_workers=0)
+val_loader = DataLoader(valid_set, 1, shuffle=False, num_workers=0)
+test_loader = DataLoader(test_dataset, 1, shuffle=False, num_workers=0)
 
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc", mode="max",save_weights_only=True)
 
-tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"Transformer/{input_config}")
+tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"TransformerVar/{input_config}")
 model = ViT(model_kwargs={
-        "embed_dim": 80,
-        "hidden_dim": 160,
-        "num_heads": 1,
-        "num_layers": 1,
+        "embed_dim": 64,
+        "hidden_dim": 128,
+        "num_heads": 2,
+        "num_layers": 8,
         "num_classes": 2,
         "dropout": 0.2,
     },
     lr=3e-4)
-trainer = pl.Trainer(max_epochs=200, logger=tb_logger, callbacks=[checkpoint_callback, LearningRateMonitor("epoch")])
+trainer = pl.Trainer(max_epochs=100, logger=tb_logger, callbacks=[checkpoint_callback, LearningRateMonitor("epoch")], accumulate_grad_batches=8)
 trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
 trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
 trainer.fit(model, train_loader, val_loader)
