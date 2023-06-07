@@ -32,6 +32,8 @@ def pre_process(histogram_data):
 
     histogram_data = np.hstack((np.array([range_1]).T, np.array([range_2]).T, min_dist_hist, max_dist_hist, min_ang_hist, max_ang_hist, min_ang_diff_hist, 
                                 max_ang_diff_hist,heatmaps,px_u_hist, px_v_hist))
+
+    # histogram_data = np.hstack((np.array([range_1]).T, np.array([range_2]).T, min_dist_hist, max_dist_hist, min_ang_hist, max_ang_hist,min_ang_diff_hist,max_ang_diff_hist,heatmaps))
     
     return histogram_data
 

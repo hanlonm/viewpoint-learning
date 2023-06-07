@@ -3,6 +3,7 @@ from torch import optim, nn, utils, Tensor
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from torch import nn
+import torch
 from torchmetrics.functional import accuracy
 
 
@@ -24,11 +25,11 @@ class ViewpointClassifier(pl.LightningModule):
                                    nn.ReLU(),
                                    nn.Linear(16, 8),
                                    nn.ReLU(),
-                                   nn.Linear(8, 1),
-                                   nn.Sigmoid())
+                                   nn.Linear(8, 2))
         self.trainable_parameters = self.model.parameters()
 
-        self.loss = nn.BCELoss()
+        self.loss = nn.CrossEntropyLoss()
+
 
     def forward(self, x):
         out = self.model(x)
@@ -39,6 +40,8 @@ class ViewpointClassifier(pl.LightningModule):
         # training_step defines the train loop.
         # it is independent of forward
         x, y = batch
+        x = x + (0.2**0.5)*torch.randn_like(x)
+        y = y.squeeze(dim=1).long()
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
         # Logging to TensorBoard by default
@@ -46,22 +49,27 @@ class ViewpointClassifier(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        # this is the validation loop
         x, y = batch
-        y_hat = self.model(x)
-        test_loss = self.loss(y_hat, y)
-        self.log("val_loss", test_loss)
-        acc = accuracy(y_hat, y,task='binary')
-        self.log("acc", acc, prog_bar=True)
+        y = y.squeeze(dim=1).long()
+        logits = self.model(x)
+        loss = self.loss(logits, y)
+        
+        preds = torch.argmax(logits, dim=1)
+        acc = (preds == y).float().mean()
+        self.log('val_loss', loss)
+        self.log('val_acc', acc, prog_bar=True)
+        return loss
 
     def test_step(self, batch, batch_idx):
         # this is the validation loop
         x, y = batch
-        y_hat = self.model(x)
-        test_loss = self.loss(y_hat, y)
-        self.log("test_loss", test_loss)
-        acc = accuracy(y_hat, y,task='binary')
-        self.log("test_acc", acc, prog_bar=True)
+        y = y.squeeze(dim=1).long()
+        logits = self.model(x)
+        loss = self.loss(logits, y)
+        preds = torch.argmax(logits, dim=1)
+        acc = (preds == y).float().mean()
+        self.log('test_loss', loss)
+        self.log('test_acc', acc)
 
     def configure_optimizers(self):
         optimizer = optim.Adam(self.trainable_parameters, lr=1e-3)
