@@ -47,3 +47,39 @@ class RegressionDataset(Dataset):
 
     def __len__(self):
         return self.values.shape[0]
+    
+
+class TransformerDataset(Dataset):
+    def __init__(self, viewpoint_sequences, labels):
+        super(TransformerDataset, self).__init__()
+        self.viewpoint_sequences = viewpoint_sequences
+        self.labels = labels
+
+    def __getitem__(self, idx):
+        viewpoint_sequence = self.viewpoint_sequences[idx]
+        label = self.labels[idx]
+
+        return viewpoint_sequence, label
+
+    def __len__(self):
+        return self.labels.shape[0]
+    
+def transformer_collate(batch):
+    max_seq_len = max(len(item) for item, _ in batch)
+    padded_batch = []
+    masks = []
+    labels = []
+    
+    for item, label in batch:
+        pad_length = max_seq_len - len(item)
+        padding = np.full((pad_length, item.shape[1]), -1)
+
+        
+        padded_item = np.vstack((item, padding))
+        padded_batch.append(padded_item)
+        
+        mask = len(item) * [False] + pad_length * [True]
+        masks.append(mask)
+        labels.append(label)
+        
+    return torch.Tensor(np.array(padded_batch)), torch.Tensor(np.array(masks)), torch.Tensor(np.array(labels))

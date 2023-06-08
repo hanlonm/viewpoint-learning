@@ -1,4 +1,5 @@
 import os
+from typing import Any
 import torch
 from torch import optim, nn, utils, Tensor
 import pytorch_lightning as pl
@@ -7,6 +8,9 @@ from torch import nn
 from torchmetrics.functional import accuracy
 from torchmetrics.regression.mae import MeanAbsoluteError
 from torchmetrics.regression.r2 import R2Score
+from torch.optim.lr_scheduler import _LRScheduler
+from torch.optim import Optimizer
+
 
 
 
@@ -246,3 +250,108 @@ class ViTReg(pl.LightningModule):
 
     def test_step(self, batch, batch_idx):
         self._calculate_loss(batch, mode="test")
+
+
+
+
+class TransformerModel(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        encoding_dim = 128
+        # self.embedding = nn.Embedding(73, 512)
+        self.embedding = nn.Linear(73, encoding_dim)
+        self.cls_token = nn.Parameter(torch.randn(1, 1, encoding_dim))
+
+        # self.transformer = nn.Transformer(
+        #     d_model=128,
+        #     nhead=2,
+        #     num_encoder_layers=4,
+        #     num_decoder_layers=4
+        # )
+        encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=2, dim_feedforward=64, norm_first=True)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
+
+        self.fc = nn.Linear(encoding_dim, 2)
+
+    def forward(self, x, mask):
+        embedded = self.embedding(x)
+        idx = torch.randperm(embedded.shape[1])
+        embedded = embedded[:, idx]
+        mask = mask[:, idx]
+        # Add CLS token
+        B, T, _ = embedded.shape
+        cls_token = self.cls_token.repeat(B, 1, 1)
+        embedded = torch.cat([cls_token, embedded], dim=1)
+        cls_mask = torch.zeros(B,1).to(embedded.device)
+        mask = torch.cat([cls_mask, mask], dim=1)
+        embedded = embedded.permute(1, 0, 2)  # Transpose to (seq_len, batch_size, hidden_dim)
+        hidden = self.encoder(embedded, src_key_padding_mask=mask)
+        hidden = hidden.permute(1, 0, 2)  # Transpose back to (batch_size, seq_len, hidden_dim)
+        logits = self.fc(hidden[:, 0, :])  # Use the last hidden state for classification
+        return logits
+
+class ViewpointTransformer(pl.LightningModule):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.save_hyperparameters()
+        self.model = TransformerModel()
+        # self.example_input_array = next(iter(train_loader))[0]
+
+        #self.acc_metric = MeanAbsoluteError()
+
+        self.loss = nn.CrossEntropyLoss()
+
+    def forward(self, x):
+        return self.model(x)
+
+    def configure_optimizers(self):
+        optimizer = optim.AdamW(self.parameters(), lr=1e-6)
+        # optimizer = optim.Adam(self.parameters())
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=10)
+        # lr_scheduler = Scheduler(optimizer, 256,4000)
+        return [optimizer], [lr_scheduler]
+    
+    def _calculate_loss(self, batch, mode="train"):
+        tokens, masks,labels = batch
+        logits = self.model(tokens, masks)
+        labels = labels.squeeze(dim=1).long()
+        loss = self.loss(logits, labels)
+        preds = torch.argmax(logits, dim=1)
+        acc = (preds == labels).float().mean()
+        self.log("%s_loss" % mode, loss)
+        self.log("%s_acc" % mode, acc, prog_bar=True)
+        # self.log("%s_r2" % mode, r2)
+        return loss
+    
+    def training_step(self, batch, batch_idx):
+        loss = self._calculate_loss(batch, mode="train")
+        return loss
+
+    def validation_step(self, batch, batch_idx):
+        self._calculate_loss(batch, mode="val")
+
+    def test_step(self, batch, batch_idx):
+        self._calculate_loss(batch, mode="test")
+
+class Scheduler(_LRScheduler):
+    def __init__(self, 
+                 optimizer: Optimizer,
+                 dim_embed: int,
+                 warmup_steps: int,
+                 last_epoch: int=-1,
+                 verbose: bool=False) -> None:
+
+        self.dim_embed = dim_embed
+        self.warmup_steps = warmup_steps
+        self.num_param_groups = len(optimizer.param_groups)
+
+        super().__init__(optimizer, last_epoch, verbose)
+        
+    def get_lr(self) -> float:
+        lr = calc_lr(self._step_count, self.dim_embed, self.warmup_steps)
+        return [lr] * self.num_param_groups
+
+
+def calc_lr(step, dim_embed, warmup_steps):
+    return dim_embed**(-0.5) * min(step**(-0.5), step * warmup_steps**(-1.5))
