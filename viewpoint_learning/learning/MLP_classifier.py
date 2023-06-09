@@ -40,7 +40,7 @@ class ViewpointClassifier(pl.LightningModule):
         # training_step defines the train loop.
         # it is independent of forward
         x, y = batch
-        x = x + (0.2**0.5)*torch.randn_like(x)
+        x = x + (0.1**0.5)*torch.randn_like(x)
         y = y.squeeze(dim=1).long()
         y_hat = self.model(x)
         loss = self.loss(y_hat, y)
@@ -48,7 +48,7 @@ class ViewpointClassifier(pl.LightningModule):
         self.log("train_loss", loss)
         return loss
 
-    def validation_step(self, batch, batch_idx):
+    def validation_step(self, batch, batch_idx, dataloader_idx):
         x, y = batch
         y = y.squeeze(dim=1).long()
         logits = self.model(x)

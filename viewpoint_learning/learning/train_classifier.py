@@ -35,6 +35,16 @@ test_errors = np.hstack((test_trans_errors, test_rot_errors))
 test_labels = np.logical_and((test_errors[:, 0]*max_error) < 0.1, test_errors[:, 1] < 1)
 test_labels = test_labels.astype(int)
 test_labels = np.array([test_labels]).T
+test_pos = np.argwhere(test_labels==1)[:,0]
+test_neg = np.argwhere(test_labels==0)[:,0]
+test_pos = np.random.choice(test_pos, 1000)
+test_neg = np.random.choice(test_neg, 1000)
+test_pos_histograms = test_histograms[test_pos]
+test_neg_histograms = test_histograms[test_neg]
+test_pos_labels = test_labels[test_pos]
+test_neg_labels = test_labels[test_neg]
+test_histograms = np.vstack((test_pos_histograms, test_neg_histograms))
+test_labels = np.vstack((test_pos_labels, test_neg_labels))
 
 pos = np.argwhere(train_labels==1)[:,0]
 neg = np.argwhere(train_labels==0)[:,0]
@@ -54,23 +64,23 @@ tot = np.sum(train_labels)
 train_dataset = ClassifierDataset(histogram_data, train_labels)
 test_dataset = ClassifierDataset(test_histograms, test_labels)
 
-print(np.sum(train_labels)/len(train_labels))
+print(np.sum(test_labels)/len(test_labels))
 
 
 
 # use 10% of training data for validation
-train_set_size = int(len(train_dataset) * 0.9)
+train_set_size = int(len(train_dataset) * 0.8)
 valid_set_size = len(train_dataset) - train_set_size
 
 # split the train set into two
-#seed = torch.Generator().manual_seed(42)
+seed = torch.Generator().manual_seed(42)
 train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size])
 
 train_loader = DataLoader(train_set, 8, shuffle=True, num_workers=0)
 val_loader = DataLoader(valid_set, 8, shuffle=False, num_workers=0)
 test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
 
-checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc", mode="max",save_weights_only=True)
+checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_0", mode="max",save_weights_only=True)
 
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"Classifier/{input_config}")
 model = ViewpointClassifier(histogram_data.shape[1])
@@ -80,7 +90,7 @@ layer_weights = model.model[layer_index].weight.flatten().tolist()
 # plt.show()
 # print(model.model[2].weight.flatten().tolist())
 trainer = pl.Trainer(max_epochs=40, logger=tb_logger, callbacks=[checkpoint_callback])
-trainer.fit(model, train_loader, val_loader)
+trainer.fit(model,train_dataloaders=train_loader, val_dataloaders=[val_loader, test_loader])
 trainer.test(dataloaders=test_loader, ckpt_path="best")
 layer_index = 0  # Index of the layer you want to access
 layer_weights = model.model[layer_index].weight.flatten().tolist()

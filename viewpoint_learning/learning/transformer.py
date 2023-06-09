@@ -269,16 +269,19 @@ class TransformerModel(nn.Module):
         #     num_encoder_layers=4,
         #     num_decoder_layers=4
         # )
-        encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=2, dim_feedforward=64, norm_first=True)
-        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=2)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=2, dim_feedforward=64, norm_first=True, dropout=0.1)
+        self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=4)
+        # encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=8, dim_feedforward=2048, norm_first=True, dropout=0.1)
+        # self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
 
         self.fc = nn.Linear(encoding_dim, 2)
 
     def forward(self, x, mask):
+        n_non_padded = torch.sum(mask)
         embedded = self.embedding(x)
-        idx = torch.randperm(embedded.shape[1])
-        embedded = embedded[:, idx]
-        mask = mask[:, idx]
+        # idx = torch.randperm(embedded.shape[1])
+        # embedded = embedded[:, idx]
+        # mask = mask[:, idx]
         # Add CLS token
         B, T, _ = embedded.shape
         cls_token = self.cls_token.repeat(B, 1, 1)
@@ -299,6 +302,8 @@ class ViewpointTransformer(pl.LightningModule):
         # self.example_input_array = next(iter(train_loader))[0]
 
         #self.acc_metric = MeanAbsoluteError()
+        self.variances = torch.tensor([0.1,0.1,0.1,0.09,0.09,0.09,0.09,5,5] + 64 * [2])
+        self.variances = torch.sqrt(self.variances).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
@@ -308,19 +313,26 @@ class ViewpointTransformer(pl.LightningModule):
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=1e-6)
         # optimizer = optim.Adam(self.parameters())
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=10)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5], gamma=10)
         # lr_scheduler = Scheduler(optimizer, 256,4000)
         return [optimizer], [lr_scheduler]
     
-    def _calculate_loss(self, batch, mode="train"):
+    def add_noise(self, x):
+        noise = torch.randn_like(x) * self.variances
+
+        return x + noise
+    
+    def _calculate_loss(self, batch, mode="train", prog_bar=False):
         tokens, masks,labels = batch
+        if mode == "train":
+            tokens = self.add_noise(tokens)
         logits = self.model(tokens, masks)
         labels = labels.squeeze(dim=1).long()
         loss = self.loss(logits, labels)
         preds = torch.argmax(logits, dim=1)
         acc = (preds == labels).float().mean()
         self.log("%s_loss" % mode, loss)
-        self.log("%s_acc" % mode, acc, prog_bar=True)
+        self.log("%s_acc" % mode, acc, prog_bar=prog_bar)
         # self.log("%s_r2" % mode, r2)
         return loss
     
@@ -328,11 +340,24 @@ class ViewpointTransformer(pl.LightningModule):
         loss = self._calculate_loss(batch, mode="train")
         return loss
 
-    def validation_step(self, batch, batch_idx):
-        self._calculate_loss(batch, mode="val")
+    def validation_step(self, batch, batch_idx, dataloader_idx):
+        if dataloader_idx == 0:
+            self._calculate_loss(batch, mode="val", prog_bar=True)
+        else:
+            self._calculate_loss(batch, mode="val",prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         self._calculate_loss(batch, mode="test")
+        
+
+    # def train_dataloader(self):
+    #     return self.data_module.train_dataloader()
+
+    # def val_dataloader(self):
+    #     return self.data_module.val_dataloader()
+
+    # def test_dataloader(self):
+    #     return self.data_module.test_dataloader()
 
 class Scheduler(_LRScheduler):
     def __init__(self, 
