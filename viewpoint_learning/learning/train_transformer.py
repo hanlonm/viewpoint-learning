@@ -9,19 +9,25 @@ from pytorch_lightning import loggers as pl_loggers
 import h5py
 import matplotlib.pyplot as plt
 from torch.utils.data import ConcatDataset
+import os
 
 
 from utils import normalize, standardize, pre_process, remove_nan_rows, create_transformer_dataset, create_variable_transformer_dataset
 
-hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_5_var.h5", "r+")
+home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
+
+# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_5_var.h5", "r+")
+# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/test_new_envs_1.h5", "r+")
 #hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
+hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/0612_100_new_envs.h5", "r+")
 print(hf.keys())
-num_points = hf.attrs["num_points"]
-num_angles = hf.attrs["num_angles"]
+# num_points = hf.attrs["num_points"]
+# num_angles = hf.attrs["num_angles"]
 
-input_config = "test"
+input_config = "new_envs"
 
-train_environments = ["00067", "00596", "00638", "00700"]
+train_environments = ["00111", "00269", "00403", "00598", "00067", "00596", "00638", "00700"]
+# train_environments = ["00067", "00596", "00638", "00700"]
 test_environments = ["00195", "00654"]
 # train_environments = ["00067", "00596", "00638", "00700", "00654"]
 # test_environments = ["00195"]
@@ -44,8 +50,8 @@ test_labels = np.array([test_labels]).T
 
 pos = np.argwhere(train_labels==1)[:,0]
 neg = np.argwhere(train_labels==0)[:,0]
-pos = np.random.choice(pos, 4000)
-neg = np.random.choice(neg, 4000)
+pos = np.random.choice(pos, 8000)
+neg = np.random.choice(neg, 8000)
 
 test_pos = np.argwhere(test_labels==1)[:,0]
 test_neg = np.argwhere(test_labels==0)[:,0]

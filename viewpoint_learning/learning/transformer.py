@@ -12,9 +12,8 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim import Optimizer
 
 
-
-
 class AttentionBlock(nn.Module):
+
     def __init__(self, embed_dim, hidden_dim, num_heads, dropout=0.0):
         """
         Inputs:
@@ -42,10 +41,10 @@ class AttentionBlock(nn.Module):
         x = x + self.attn(inp_x, inp_x, inp_x)[0]
         x = x + self.linear(self.layer_norm_2(x))
         return x
-    
 
 
 class ViewpointTransformer(nn.Module):
+
     def __init__(
         self,
         embed_dim,
@@ -68,19 +67,19 @@ class ViewpointTransformer(nn.Module):
         """
         super().__init__()
 
-
         # Layers/Networks
         self.input_layer = nn.Linear(73, embed_dim)
         self.transformer = nn.Sequential(
-            *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers))
-        )
-        self.mlp_head = nn.Sequential(nn.LayerNorm(embed_dim), nn.Linear(embed_dim, 1), nn.Sigmoid())
+            *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout)
+              for _ in range(num_layers)))
+        self.mlp_head = nn.Sequential(nn.LayerNorm(embed_dim),
+                                      nn.Linear(embed_dim, 1), nn.Sigmoid())
         self.dropout = nn.Dropout(dropout)
 
         # Parameters/Embeddings
         self.cls_token = nn.Parameter(torch.randn(1, 1, embed_dim))
 
-    def forward(self, x:torch.Tensor):
+    def forward(self, x: torch.Tensor):
         # Preprocess input
         B, T, _ = x.shape
         x = self.input_layer(x)
@@ -98,9 +97,10 @@ class ViewpointTransformer(nn.Module):
         cls = x[0]
         out = self.mlp_head(cls)
         return out
-    
-    
+
+
 class ViewpointTransformerReg(nn.Module):
+
     def __init__(
         self,
         embed_dim,
@@ -122,19 +122,19 @@ class ViewpointTransformerReg(nn.Module):
         """
         super().__init__()
 
-
         # Layers/Networks
         self.input_layer = nn.Linear(73, embed_dim)
         self.transformer = nn.Sequential(
-            *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout) for _ in range(num_layers))
-        )
-        self.mlp_head = nn.Sequential(nn.LayerNorm(embed_dim), nn.Linear(embed_dim, 1))
+            *(AttentionBlock(embed_dim, hidden_dim, num_heads, dropout=dropout)
+              for _ in range(num_layers)))
+        self.mlp_head = nn.Sequential(nn.LayerNorm(embed_dim),
+                                      nn.Linear(embed_dim, 1))
         self.dropout = nn.Dropout(dropout)
 
         # Parameters/Embeddings
         self.cls_token = nn.Parameter(torch.randn(1, 1, embed_dim))
 
-    def forward(self, x:torch.Tensor):
+    def forward(self, x: torch.Tensor):
         # Preprocess input
         B, T, _ = x.shape
         x = self.input_layer(x)
@@ -152,9 +152,10 @@ class ViewpointTransformerReg(nn.Module):
         cls = x[0]
         out = self.mlp_head(cls)
         return out
-    
+
 
 class ViT(pl.LightningModule):
+
     def __init__(self, model_kwargs, lr):
         super().__init__()
         self.save_hyperparameters()
@@ -166,14 +167,14 @@ class ViT(pl.LightningModule):
 
         self.loss = nn.BCELoss()
 
-
-
     def forward(self, x):
         return self.model(x)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr)
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                                      milestones=[100, 150],
+                                                      gamma=0.1)
         return [optimizer], [lr_scheduler]
 
     def _calculate_loss(self, batch, mode="train"):
@@ -183,7 +184,7 @@ class ViT(pl.LightningModule):
         # print(labels)
         loss = self.loss(preds, labels)
         # acc = (preds.argmax(dim=-1) == labels).float().mean()
-        acc = accuracy(preds, labels,task='binary')
+        acc = accuracy(preds, labels, task='binary')
         # acc = self.acc_metric(preds, labels)
         # r2 = self.r2_score(preds, labels)
 
@@ -204,6 +205,7 @@ class ViT(pl.LightningModule):
 
 
 class ViTReg(pl.LightningModule):
+
     def __init__(self, model_kwargs, lr):
         super().__init__()
         self.save_hyperparameters()
@@ -215,14 +217,14 @@ class ViTReg(pl.LightningModule):
 
         self.loss = nn.SmoothL1Loss(reduction="mean")
 
-
-
     def forward(self, x):
         return self.model(x)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=self.hparams.lr)
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[100, 150], gamma=0.1)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                                      milestones=[100, 150],
+                                                      gamma=0.1)
         return [optimizer], [lr_scheduler]
 
     def _calculate_loss(self, batch, mode="train"):
@@ -252,9 +254,8 @@ class ViTReg(pl.LightningModule):
         self._calculate_loss(batch, mode="test")
 
 
-
-
 class TransformerModel(nn.Module):
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
@@ -269,7 +270,11 @@ class TransformerModel(nn.Module):
         #     num_encoder_layers=4,
         #     num_decoder_layers=4
         # )
-        encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=2, dim_feedforward=64, norm_first=True, dropout=0.1)
+        encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim,
+                                                   nhead=2,
+                                                   dim_feedforward=64,
+                                                   norm_first=True,
+                                                   dropout=0.1)
         self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=4)
         # encoder_layer = nn.TransformerEncoderLayer(d_model=encoding_dim, nhead=8, dim_feedforward=2048, norm_first=True, dropout=0.1)
         # self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=6)
@@ -286,15 +291,20 @@ class TransformerModel(nn.Module):
         B, T, _ = embedded.shape
         cls_token = self.cls_token.repeat(B, 1, 1)
         embedded = torch.cat([cls_token, embedded], dim=1)
-        cls_mask = torch.zeros(B,1).to(embedded.device)
+        cls_mask = torch.zeros(B, 1).to(embedded.device)
         mask = torch.cat([cls_mask, mask], dim=1)
-        embedded = embedded.permute(1, 0, 2)  # Transpose to (seq_len, batch_size, hidden_dim)
+        embedded = embedded.permute(
+            1, 0, 2)  # Transpose to (seq_len, batch_size, hidden_dim)
         hidden = self.encoder(embedded, src_key_padding_mask=mask)
-        hidden = hidden.permute(1, 0, 2)  # Transpose back to (batch_size, seq_len, hidden_dim)
-        logits = self.fc(hidden[:, 0, :])  # Use the last hidden state for classification
+        hidden = hidden.permute(
+            1, 0, 2)  # Transpose back to (batch_size, seq_len, hidden_dim)
+        logits = self.fc(
+            hidden[:, 0, :])  # Use the first hidden state for classification
         return logits
 
+
 class ViewpointTransformer(pl.LightningModule):
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters()
@@ -302,28 +312,31 @@ class ViewpointTransformer(pl.LightningModule):
         # self.example_input_array = next(iter(train_loader))[0]
 
         #self.acc_metric = MeanAbsoluteError()
-        self.variances = torch.tensor([0.1,0.1,0.1,0.09,0.09,0.09,0.09,5,5] + 64 * [2])
+        self.variances = torch.tensor(
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2])
         self.variances = torch.sqrt(self.variances).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
-    def forward(self, x):
-        return self.model(x)
+    def forward(self, x, mask):
+        return self.model(x, mask)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=1e-6)
         # optimizer = optim.Adam(self.parameters())
-        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5], gamma=10)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                                      milestones=[5],
+                                                      gamma=10)
         # lr_scheduler = Scheduler(optimizer, 256,4000)
         return [optimizer], [lr_scheduler]
-    
+
     def add_noise(self, x):
         noise = torch.randn_like(x) * self.variances
 
         return x + noise
-    
+
     def _calculate_loss(self, batch, mode="train", prog_bar=False):
-        tokens, masks,labels = batch
+        tokens, masks, labels = batch
         if mode == "train":
             tokens = self.add_noise(tokens)
         logits = self.model(tokens, masks)
@@ -335,7 +348,7 @@ class ViewpointTransformer(pl.LightningModule):
         self.log("%s_acc" % mode, acc, prog_bar=prog_bar)
         # self.log("%s_r2" % mode, r2)
         return loss
-    
+
     def training_step(self, batch, batch_idx):
         loss = self._calculate_loss(batch, mode="train")
         return loss
@@ -344,11 +357,10 @@ class ViewpointTransformer(pl.LightningModule):
         if dataloader_idx == 0:
             self._calculate_loss(batch, mode="val", prog_bar=True)
         else:
-            self._calculate_loss(batch, mode="val",prog_bar=True)
+            self._calculate_loss(batch, mode="val", prog_bar=True)
 
     def test_step(self, batch, batch_idx):
         self._calculate_loss(batch, mode="test")
-        
 
     # def train_dataloader(self):
     #     return self.data_module.train_dataloader()
@@ -359,20 +371,22 @@ class ViewpointTransformer(pl.LightningModule):
     # def test_dataloader(self):
     #     return self.data_module.test_dataloader()
 
+
 class Scheduler(_LRScheduler):
-    def __init__(self, 
+
+    def __init__(self,
                  optimizer: Optimizer,
                  dim_embed: int,
                  warmup_steps: int,
-                 last_epoch: int=-1,
-                 verbose: bool=False) -> None:
+                 last_epoch: int = -1,
+                 verbose: bool = False) -> None:
 
         self.dim_embed = dim_embed
         self.warmup_steps = warmup_steps
         self.num_param_groups = len(optimizer.param_groups)
 
         super().__init__(optimizer, last_epoch, verbose)
-        
+
     def get_lr(self) -> float:
         lr = calc_lr(self._step_count, self.dim_embed, self.warmup_steps)
         return [lr] * self.num_param_groups
