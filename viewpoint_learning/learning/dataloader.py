@@ -66,6 +66,7 @@ class TransformerDataset(Dataset):
     def __len__(self):
         return self.labels.shape[0]
     
+
 def transformer_collate(batch):
     max_seq_len = max(len(item) for item, _ in batch)
     padded_batch = []
@@ -83,9 +84,45 @@ def transformer_collate(batch):
         mask = len(item) * [False] + pad_length * [True]
         masks.append(mask)
         labels.append(label)
-        
-    return torch.Tensor(np.array(padded_batch)), torch.Tensor(np.array(masks)), torch.Tensor(np.array(labels))
+    return torch.from_numpy(np.array(padded_batch).astype(np.float32)), torch.from_numpy(np.array(masks).astype(np.float32)), torch.from_numpy(np.array(labels).astype(np.float32))
 
+    
+class PCTTransformerDataset(Dataset):
+    def __init__(self, viewpoint_sequences, labels):
+        super(PCTTransformerDataset, self).__init__()
+        self.viewpoint_sequences = viewpoint_sequences
+        self.labels = labels
+
+    def __getitem__(self, idx):
+        viewpoint_sequence = self.viewpoint_sequences[idx]
+        label = self.labels[idx]
+
+        return torch.from_numpy(viewpoint_sequence), torch.tensor(label)
+
+    def __len__(self):
+        return self.labels.shape[0]
+
+def pct_transformer_collate(batch):
+    # rows_list = [tensor.size(0) for tensor, label in batch]
+    # min_rows = min(rows_list)
+    resampled_tensor_list = []
+    labels = []
+    target_rows = 2048
+    for tensor, label in batch:
+        if tensor.size(0) < target_rows:
+            # If tensor has fewer rows, resample with replacement
+            indices = torch.randint(0, tensor.size(0), (target_rows,))
+        else:
+            # If tensor has equal or more rows, resample without replacement
+            indices = torch.randperm(tensor.size(0))[:target_rows]
+        resampled_tensor = tensor.index_select(0, indices)  # Resample tensor
+        resampled_tensor_list.append(resampled_tensor)  # Add resampled tensor to the list
+        labels.append(label)
+
+    # print(torch.tensor(resampled_tensor_list))
+    # print(torch.tensor(labels))
+        
+    return torch.stack(resampled_tensor_list, dim=0).to(torch.float32), torch.stack(labels, dim=0).to(torch.float32)
 
 class TestCallback(pl.Callback):
     def __init__(self, test_loader):
