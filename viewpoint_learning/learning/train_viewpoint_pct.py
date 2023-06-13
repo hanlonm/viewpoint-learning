@@ -38,6 +38,8 @@ max_error = 5.0
 train_tokens, train_trans_errors, train_rot_errors = create_variable_transformer_dataset(hf, train_environments, max_error)
 test_tokens, test_trans_errors, test_rot_errors = create_variable_transformer_dataset(hf, test_environments, max_error)
 
+hf.close()
+
 train_errors = np.hstack((train_trans_errors, train_rot_errors))
 train_labels = np.logical_and((train_errors[:, 0]*max_error) < 0.10, train_errors[:, 1] < 1)
 train_labels = train_labels.astype(int)

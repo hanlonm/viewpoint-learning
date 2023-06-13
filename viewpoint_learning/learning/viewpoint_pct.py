@@ -43,8 +43,17 @@ class NaivePCT(nn.Module):
             nn.BatchNorm1d(1024),
             nn.LeakyReLU(negative_slope=0.2)
         )
+
+        # Define the layers for the 2D pathway
+        # self.conv2d = nn.Conv2d(in_channels=1, out_channels=128, kernel_size=3, padding=1)
+        # self.linear2d = nn.Linear(in_features=512, out_features=64)
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
+        B, N, T = x.shape
+        # heatmaps = x[:,:, -64:]
+        # heatmaps = heatmaps.view(B*N, 1, 8, 8)
+        # heatmaps = F.relu(self.conv2d(heatmaps))
+        # heatmaps = F.relu(self.linear2d(heatmaps))
         x = self.embedding(x)
         has_nan = torch.isnan(x).any().item()
         
@@ -178,13 +187,13 @@ class PCTViewpointTransformer(pl.LightningModule):
 
         #self.acc_metric = MeanAbsoluteError()
         self.variances = torch.tensor(
-            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2])
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
-    def forward(self, x, mask):
-        return self.model(x, mask)
+    def forward(self, x):
+        return self.model(x)
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=1e-4)
