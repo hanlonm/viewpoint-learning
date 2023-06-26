@@ -31,7 +31,7 @@ class NaivePCT(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.embedding = Embedding(73, 128)
+        self.embedding = Embedding(137, 128)
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
@@ -187,7 +187,7 @@ class PCTViewpointTransformer(pl.LightningModule):
 
         #self.acc_metric = MeanAbsoluteError()
         self.variances = torch.tensor(
-            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2]) / 10
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2] + 64 * [0.1]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
 
         self.loss = nn.CrossEntropyLoss()
