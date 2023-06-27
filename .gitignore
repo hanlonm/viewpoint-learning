@@ -168,3 +168,4 @@ TransformerReg/
 TransformerVar/
 PCT/
 *.pkl
+*.out

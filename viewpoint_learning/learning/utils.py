@@ -1,4 +1,5 @@
 import numpy as np
+from tqdm import tqdm
 
 def normalize(input_arr: np.ndarray):
     mean = np.mean(input_arr)
@@ -106,11 +107,11 @@ def create_transformer_dataset(hf, environments, max_error):
 def create_variable_transformer_dataset(hf, environments, max_error):
     inputs = []
     errors = []
-    for environment in environments:
+    for environment in tqdm(environments):
         environment_data = hf[environment]
         errors.append(environment_data["errors"][:])
 
-    for environment in environments:
+    for environment in tqdm(environments):
         group = hf[environment]["token_data"]
         keys = list(group.keys())
         keys.sort(key=int)

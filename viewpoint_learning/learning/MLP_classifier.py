@@ -72,5 +72,5 @@ class ViewpointClassifier(pl.LightningModule):
         self.log('test_acc', acc)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.trainable_parameters, lr=1e-3)
+        optimizer = optim.Adam(self.trainable_parameters, lr=1e-4)
         return optimizer
