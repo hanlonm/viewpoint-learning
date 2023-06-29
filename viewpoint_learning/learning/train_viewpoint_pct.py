@@ -19,17 +19,17 @@ home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
 # hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/test_new_envs_1.h5", "r+")
 #hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
 # hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/0612_100_new_envs.h5", "r+")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230624.h5", "r")
+hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230629.h5", "r")
 print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "dino_20k_noise_8"
+input_config = "dino_3_10-7_16"
 
-train_environments = ["00111", "00269", "00403", "00598", "00067", "00596", "00638", "00700"]
+train_environments = ["00269", "00067", "00596", "00638", "00700"]
 # train_environments = ["00067"]
 # train_environments = ["00067", "00596", "00638", "00700"]
-test_environments = ["00195", "00654"]
+test_environments = ["00195", "00654", "00111", "00403"]
 # train_environments = ["00067", "00596", "00638", "00700", "00654"]
 # test_environments = ["00195"]
 
@@ -55,15 +55,15 @@ pos = np.argwhere(train_labels==1)[:,0]
 neg = np.argwhere(train_labels==0)[:,0]
 print(len(pos))
 print(len(neg))
-pos = np.random.choice(pos, 20000)
-neg = np.random.choice(neg, 20000)
+pos = np.random.choice(pos, 12500)
+neg = np.random.choice(neg, 12500)
 
 test_pos = np.argwhere(test_labels==1)[:,0]
 test_neg = np.argwhere(test_labels==0)[:,0]
 print(len(test_pos))
 print(len(test_neg))
-test_pos = np.random.choice(test_pos, 5000)
-test_neg = np.random.choice(test_neg, 5000)
+test_pos = np.random.choice(test_pos, 10000)
+test_neg = np.random.choice(test_neg, 10000)
 test_pos_toks = test_tokens[test_pos]
 test_neg_toks = test_tokens[test_neg]
 test_pos_labels = test_labels[test_pos]
@@ -95,9 +95,9 @@ valid_set_size = len(train_dataset) - train_set_size
 seed = torch.Generator().manual_seed(42)
 train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size], generator=seed)
 
-train_loader = DataLoader(train_set, 8, True, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
-val_loader = DataLoader(valid_set, 8, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
-test_loader = DataLoader(test_dataset, 8, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
+train_loader = DataLoader(train_set, 16, True, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
+val_loader = DataLoader(valid_set, 32, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
+test_loader = DataLoader(test_dataset, 32, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
 
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_0", mode="max",save_weights_only=True)
 checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_1", mode="max",save_weights_only=True,filename='best_test')
