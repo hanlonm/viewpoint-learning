@@ -141,3 +141,18 @@ class ViewpointClassifier(pl.LightningModule):
             'lr_scheduler': scheduler,
             'monitor': monitor_metric
         }
+    def on_train_epoch_end(self):
+
+        #  the function is called after every epoch is completed
+        if(self.current_epoch==0):
+            sampleImg=torch.rand((1,146)).cuda()
+            self.logger.experiment.add_graph(self,sampleImg)
+        self.custom_histogram_adder()
+
+    def custom_histogram_adder(self):
+        
+        # iterating through all parameters
+        for name,params in self.named_parameters():
+           
+            self.logger.experiment.add_histogram(name,params,self.current_epoch)
+            
