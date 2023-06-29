@@ -15,19 +15,21 @@ home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
 
 
 # hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/0601_100_occ.h5", "r+")
-#hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_histograms.h5", "r")
+# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
+hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/230627_hist.h5", "r")
+# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_histograms.h5", "r")
 
 print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "all_envs_20k"
+input_config = "all_envs_20k_low"
 
-# train_environments = ["00067", "00596", "00638", "00700"]
+train_environments = ["00067", "00596", "00638", "00700", "00269"]
+test_environments = ["00195", "00654", "00111"]
+# test_environments = ["00195", "00654", "00111", "00403"]
+# train_environments = ["00111", "00269", "00403", "00067", "00596", "00638", "00700"]
 # test_environments = ["00195", "00654"]
-train_environments = ["00111", "00269", "00403", "00598", "00067", "00596", "00638", "00700"]
-test_environments = ["00195", "00654"]
 
 
 max_error = 5.0
@@ -35,18 +37,18 @@ train_histograms, train_trans_errors, train_rot_errors = create_dataset(hf, trai
 test_histograms, test_trans_errors, test_rot_errors = create_dataset(hf, test_environments, max_error)
 
 train_errors = np.hstack((train_trans_errors, train_rot_errors))
-train_labels = np.logical_and((train_errors[:, 0]*max_error) < 0.1, train_errors[:, 1] < 1)
+train_labels = np.logical_and((train_errors[:, 0]*max_error) < 1, train_errors[:, 1] < 5)
 train_labels = train_labels.astype(int)
 train_labels = np.array([train_labels]).T
 
 test_errors = np.hstack((test_trans_errors, test_rot_errors))
-test_labels = np.logical_and((test_errors[:, 0]*max_error) < 0.1, test_errors[:, 1] < 1)
+test_labels = np.logical_and((test_errors[:, 0]*max_error) < 1, test_errors[:, 1] < 5)
 test_labels = test_labels.astype(int)
 test_labels = np.array([test_labels]).T
 test_pos = np.argwhere(test_labels==1)[:,0]
 test_neg = np.argwhere(test_labels==0)[:,0]
-test_pos = np.random.choice(test_pos, 5000)
-test_neg = np.random.choice(test_neg, 5000)
+test_pos = np.random.choice(test_pos, 10000)
+test_neg = np.random.choice(test_neg, 10000)
 test_pos_histograms = test_histograms[test_pos]
 test_neg_histograms = test_histograms[test_neg]
 test_pos_labels = test_labels[test_pos]
@@ -56,8 +58,8 @@ test_labels = np.vstack((test_pos_labels, test_neg_labels))
 
 pos = np.argwhere(train_labels==1)[:,0]
 neg = np.argwhere(train_labels==0)[:,0]
-pos = np.random.choice(pos, 20000)
-neg = np.random.choice(neg, 20000)
+pos = np.random.choice(pos, 12500)
+neg = np.random.choice(neg, 12500)
 
 pos_hist = train_histograms[pos]
 neg_hist = train_histograms[neg]
@@ -84,9 +86,9 @@ valid_set_size = len(train_dataset) - train_set_size
 seed = torch.Generator().manual_seed(42)
 train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size])
 
-train_loader = DataLoader(train_set, 8, shuffle=True, num_workers=0)
-val_loader = DataLoader(valid_set, 8, shuffle=False, num_workers=0)
-test_loader = DataLoader(test_dataset, 8, shuffle=False, num_workers=0)
+train_loader = DataLoader(train_set, 32, shuffle=True, num_workers=0)
+val_loader = DataLoader(valid_set, 32, shuffle=False, num_workers=0)
+test_loader = DataLoader(test_dataset, 32, shuffle=False, num_workers=0)
 
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_0", mode="max",save_weights_only=True)
 checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_1", mode="max",save_weights_only=True,filename='best_test')
