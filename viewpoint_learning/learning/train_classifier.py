@@ -23,7 +23,7 @@ print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "all_envs_20k_low"
+input_config = "mlp_baseline_1-5_32_no_403"
 
 train_environments = ["00067", "00596", "00638", "00700", "00269"]
 test_environments = ["00195", "00654", "00111"]
@@ -37,12 +37,12 @@ train_histograms, train_trans_errors, train_rot_errors = create_dataset(hf, trai
 test_histograms, test_trans_errors, test_rot_errors = create_dataset(hf, test_environments, max_error)
 
 train_errors = np.hstack((train_trans_errors, train_rot_errors))
-train_labels = np.logical_and((train_errors[:, 0]*max_error) < 1, train_errors[:, 1] < 5)
+train_labels = np.logical_and((train_errors[:, 0]*max_error) < 0.10, train_errors[:, 1] < 1)
 train_labels = train_labels.astype(int)
 train_labels = np.array([train_labels]).T
 
 test_errors = np.hstack((test_trans_errors, test_rot_errors))
-test_labels = np.logical_and((test_errors[:, 0]*max_error) < 1, test_errors[:, 1] < 5)
+test_labels = np.logical_and((test_errors[:, 0]*max_error) < 0.10, test_errors[:, 1] < 1)
 test_labels = test_labels.astype(int)
 test_labels = np.array([test_labels]).T
 test_pos = np.argwhere(test_labels==1)[:,0]
