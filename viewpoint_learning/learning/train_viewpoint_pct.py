@@ -19,17 +19,22 @@ home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
 # hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/test_new_envs_1.h5", "r+")
 #hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
 # hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/0612_100_new_envs.h5", "r+")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230629.h5", "r")
+#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230629.h5", "r")
+#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230624.h5", "r")
+# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230704_dino_env_12.h5", "r")
+hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/opt_occ_100_50_230724.h5", "r")
+
+
 print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "dino_3_10-7_16"
+input_config = "dino_3_10-6_16_occ_opt"
 
-train_environments = ["00269", "00067", "00596", "00638", "00700"]
+train_environments = ["00269_opt", "00067_opt", "00596_opt", "00638_opt", "00700_opt"]
 # train_environments = ["00067"]
 # train_environments = ["00067", "00596", "00638", "00700"]
-test_environments = ["00195", "00654", "00111", "00403"]
+test_environments = ["00195_opt", "00654_opt", "00111_opt", "00403_opt"]
 # train_environments = ["00067", "00596", "00638", "00700", "00654"]
 # test_environments = ["00195"]
 
@@ -95,16 +100,16 @@ valid_set_size = len(train_dataset) - train_set_size
 seed = torch.Generator().manual_seed(42)
 train_set, valid_set = random_split(train_dataset, [train_set_size, valid_set_size], generator=seed)
 
-train_loader = DataLoader(train_set, 16, True, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
-val_loader = DataLoader(valid_set, 32, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
-test_loader = DataLoader(test_dataset, 32, False, num_workers=4, collate_fn=pct_transformer_collate, pin_memory=False)
+train_loader = DataLoader(train_set, 16, True, num_workers=8, collate_fn=pct_transformer_collate, pin_memory=True)
+val_loader = DataLoader(valid_set, 32, False, num_workers=8, collate_fn=pct_transformer_collate, pin_memory=True)
+test_loader = DataLoader(test_dataset, 32, False, num_workers=8, collate_fn=pct_transformer_collate, pin_memory=True)
 
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_0", mode="max",save_weights_only=True)
-checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_1", mode="max",save_weights_only=True,filename='best_test')
+checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_1", mode="max",save_weights_only=True,filename=f'best_test_{input_config}')
 test_cb = TestCallback(test_loader)
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"PCT/{input_config}")
 model = PCTViewpointTransformer()
-trainer = pl.Trainer(max_epochs=100, logger=tb_logger, callbacks=[checkpoint_callback, LearningRateMonitor("step"), checkpoint_test_callback])
+trainer = pl.Trainer(max_epochs=75, logger=tb_logger, callbacks=[checkpoint_callback, LearningRateMonitor("step"), checkpoint_test_callback], profiler="simple")
 trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
 trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
 trainer.fit(model,train_dataloaders=train_loader, val_dataloaders=[val_loader, test_loader])

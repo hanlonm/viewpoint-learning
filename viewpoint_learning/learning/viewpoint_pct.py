@@ -31,7 +31,7 @@ class NaivePCT(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.embedding = Embedding(76, 128)
+        self.embedding = Embedding(73+3, 128)
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
@@ -55,10 +55,8 @@ class NaivePCT(nn.Module):
         # heatmaps = F.relu(self.conv2d(heatmaps))
         # heatmaps = F.relu(self.linear2d(heatmaps))
         x = self.embedding(x)
-        has_nan = torch.isnan(x).any().item()
         
         x1 = self.sa1(x)
-        has_nan = torch.isnan(x1).any().item()
         x2 = self.sa2(x1)
         x3 = self.sa3(x2)
         x4 = self.sa4(x3)
@@ -84,8 +82,8 @@ class Classification(nn.Module):
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
 
-        self.dp1 = nn.Dropout(p=0.5)
-        self.dp2 = nn.Dropout(p=0.5)
+        self.dp1 = nn.Dropout(p=0.2)
+        self.dp2 = nn.Dropout(p=0.2)
     
     def forward(self, x):
         x = F.relu(self.bn1(self.linear1(x)))
@@ -196,7 +194,7 @@ class PCTViewpointTransformer(pl.LightningModule):
         return self.model(x)
 
     def configure_optimizers(self):
-        optimizer = optim.AdamW(self.parameters(), lr=1e-7)
+        optimizer = optim.AdamW(self.parameters(), lr=1e-5)
         # optimizer = optim.Adam(self.parameters())
         lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
                                                       milestones=[500],

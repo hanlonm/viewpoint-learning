@@ -116,7 +116,8 @@ def create_variable_transformer_dataset(hf, environments, max_error):
         keys = list(group.keys())
         keys.sort(key=int)
         for key in keys:
-            inputs.append(group[key][:])
+            token = group[key][:]
+            inputs.append(token)
         
     token_data = np.array(inputs, dtype="object")
     # token_data, nan_rows = remove_nan_rows(token_data)

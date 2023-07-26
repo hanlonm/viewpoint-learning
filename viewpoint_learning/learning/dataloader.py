@@ -107,7 +107,7 @@ def pct_transformer_collate(batch):
     # min_rows = min(rows_list)
     resampled_tensor_list = []
     labels = []
-    target_rows = 2048
+    target_rows = 1024
     for tensor, label in batch:
         if tensor.size(0) < target_rows:
             # If tensor has fewer rows, resample with replacement

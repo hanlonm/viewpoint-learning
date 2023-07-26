@@ -16,17 +16,21 @@ home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
 
 # hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/0601_100_occ.h5", "r+")
 # hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/230627_hist.h5", "r")
+# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/230627_hist.h5", "r")
 # hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_histograms.h5", "r")
+#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230705_dino_3_hist.h5", "r")
+hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/opt_occ_100_50_230724.h5", "r")
+
+
 
 print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "mlp_baseline_1-5_32_no_403"
+input_config = "mlp_opt_occ_1-5_32"
 
-train_environments = ["00067", "00596", "00638", "00700", "00269"]
-test_environments = ["00195", "00654", "00111"]
+train_environments = ["00067_opt", "00596_opt", "00638_opt", "00700_opt", "00269_opt"]
+test_environments = ["00195_opt", "00654_opt", "00111_opt", "00403_opt"]
 # test_environments = ["00195", "00654", "00111", "00403"]
 # train_environments = ["00111", "00269", "00403", "00067", "00596", "00638", "00700"]
 # test_environments = ["00195", "00654"]
