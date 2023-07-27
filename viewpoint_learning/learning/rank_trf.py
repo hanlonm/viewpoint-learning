@@ -35,12 +35,12 @@ class NaivePCT(nn.Module):
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
-        self.sa3 = SA(128)
-        self.sa4 = SA(128)
+        # self.sa3 = SA(128)
+        # self.sa4 = SA(128)
 
         self.linear = nn.Sequential(
-            nn.Conv1d(512, 1024, kernel_size=1, bias=False),
-            nn.BatchNorm1d(1024),
+            nn.Conv1d(256, 512, kernel_size=1, bias=False),
+            nn.BatchNorm1d(512),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -58,9 +58,9 @@ class NaivePCT(nn.Module):
         
         x1 = self.sa1(x)
         x2 = self.sa2(x1)
-        x3 = self.sa3(x2)
-        x4 = self.sa4(x3)
-        x = torch.cat([x1, x2, x3, x4], dim=1)
+        # x3 = self.sa3(x2)
+        # x4 = self.sa4(x3)
+        x = torch.cat([x1, x2], dim=1)
 
         x = self.linear(x)
 
@@ -75,12 +75,12 @@ class Classification(nn.Module):
     def __init__(self, num_categories=40):
         super().__init__()
 
-        self.linear1 = nn.Linear(1024, 512, bias=False)
-        self.linear2 = nn.Linear(512, 256)
-        self.linear3 = nn.Linear(256, num_categories)
+        self.linear1 = nn.Linear(512, 256, bias=False)
+        self.linear2 = nn.Linear(256, 128)
+        self.linear3 = nn.Linear(128, num_categories)
 
-        self.bn1 = nn.BatchNorm1d(512)
-        self.bn2 = nn.BatchNorm1d(256)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.bn2 = nn.BatchNorm1d(128)
 
         self.dp1 = nn.Dropout(p=0.2)
         self.dp2 = nn.Dropout(p=0.2)
@@ -211,8 +211,9 @@ class PCTRankTransformer(pl.LightningModule):
 
     def _calculate_loss(self, batch, mode="train", prog_bar=False):
         x1, x2, y = batch
-        # if mode == "train":
-        #     tokens = self.add_noise(tokens)
+        if mode == "train":
+            x1 = self.add_noise(x1)
+            x2 = self.add_noise(x2)
         has_nan = torch.isnan(x1).any().item()
 
         out_1 = self.model(x1)
