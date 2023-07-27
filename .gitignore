@@ -167,5 +167,6 @@ Transformer/
 TransformerReg/
 TransformerVar/
 PCT/
+MLP_*/
 *.pkl
 *.out

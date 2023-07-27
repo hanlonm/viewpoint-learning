@@ -82,7 +82,7 @@ print(np.sum(test_labels)/len(test_labels))
 
 
 
-# use 10% of training data for validation
+# use 20% of training data for validation
 train_set_size = int(len(train_dataset) * 0.8)
 valid_set_size = len(train_dataset) - train_set_size
 
