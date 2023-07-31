@@ -21,7 +21,7 @@ test_environments = ["00195_opt", "00654_opt", "00111_opt", "00403_opt"]
 
 batch_size = 16
 lr = 1e-4
-name = "test_100_opt_bal"
+name = "test_100_opt_bal_weight"
 input_config = f"{name}_bs{batch_size}_lr{lr}"
 
 
@@ -51,8 +51,7 @@ checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_loss/datal
 
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"MLP_rank/{input_config}")
 
-model = RankMLP.load_from_checkpoint(checkpoint_path="/local/home/hanlonm/viewpoint-learning/MLP_rank/test_100_opt_bal_bs16_lr0.0001/lightning_logs/version_3/checkpoints/epoch=190-step=916418.ckpt",
-                                     lr=lr)
+model = RankMLP(lr=lr)
 
 trainer = pl.Trainer(max_epochs=400, logger=tb_logger, callbacks=[checkpoint_callback,checkpoint_test_callback])
 trainer.fit(model,train_dataloaders=train_loader, val_dataloaders=[val_loader, test_loader])

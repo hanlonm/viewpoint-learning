@@ -41,14 +41,14 @@ class RankDataset(Dataset):
         self.data = data
 
     def __getitem__(self, idx):
-        input_1, input_2, label = self.data[idx]
+        input_1, input_2, label, weight = self.data[idx]
 
         input_1 = torch.Tensor(input_1)
         input_2 = torch.Tensor(input_2)
         label = torch.Tensor([label])
+        weight = torch.Tensor([weight])
 
-
-        return input_1, input_2, label
+        return input_1, input_2, label, weight
     
     def __len__(self):
         return len(self.data)

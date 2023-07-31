@@ -19,16 +19,16 @@ print(hf.keys())
 train_environments = ["00067_opt", "00596_opt", "00638_opt", "00700_opt", "00269_opt"]
 test_environments = ["00195_opt", "00654_opt", "00111_opt", "00403_opt"]
 
-batch_size = 16
+batch_size = 64
 lr = 1e-5
-name = "test_50_opt_bal_noise"
+name = "test_weight_opt_norm_10x"
 input_config = f"{name}_bs{batch_size}_lr{lr}"
 
 
 max_error = 5.0
 
-train_data = create_rank_trf_dataset(hf, train_environments, max_error, samples_per_point=100)
-test_data = create_rank_trf_dataset(hf, test_environments, max_error, samples_per_point=50)
+train_data = create_rank_trf_dataset(hf, train_environments, max_error, weight_factor=10,samples_per_point=100)
+test_data = create_rank_trf_dataset(hf, test_environments, max_error, weight_factor=10,samples_per_point=50)
 
 
 train_dataset = RankDataset(train_data)
@@ -55,5 +55,5 @@ model = PCTRankTransformer(lr=lr)
 
 trainer = pl.Trainer(max_epochs=400, logger=tb_logger, callbacks=[checkpoint_callback,checkpoint_test_callback])
 trainer.fit(model,train_dataloaders=train_loader, val_dataloaders=[val_loader, test_loader])
-trainer.test(dataloaders=test_loader, ckpt_path=f"best_{input_config}")
+trainer.test(dataloaders=test_loader, ckpt_path=f"best")
 

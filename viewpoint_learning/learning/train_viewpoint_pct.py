@@ -29,7 +29,7 @@ print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "dino_3_10-6_16_occ_opt"
+input_config = "dino_3_10-5_16_occ_opt_norm_small_noheat"
 
 train_environments = ["00269_opt", "00067_opt", "00596_opt", "00638_opt", "00700_opt"]
 # train_environments = ["00067"]

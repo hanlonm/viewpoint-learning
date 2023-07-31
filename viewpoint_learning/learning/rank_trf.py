@@ -31,7 +31,7 @@ class NaivePCT(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.embedding = Embedding(73+3, 128)
+        self.embedding = Embedding(9, 128)
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
@@ -39,8 +39,8 @@ class NaivePCT(nn.Module):
         # self.sa4 = SA(128)
 
         self.linear = nn.Sequential(
-            nn.Conv1d(256, 512, kernel_size=1, bias=False),
-            nn.BatchNorm1d(512),
+            nn.Conv1d(256, 128, kernel_size=1, bias=False),
+            nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -75,15 +75,15 @@ class Classification(nn.Module):
     def __init__(self, num_categories=40):
         super().__init__()
 
-        self.linear1 = nn.Linear(512, 256, bias=False)
-        self.linear2 = nn.Linear(256, 128)
-        self.linear3 = nn.Linear(128, num_categories)
+        self.linear1 = nn.Linear(128, 128, bias=False)
+        self.linear2 = nn.Linear(128, 64)
+        self.linear3 = nn.Linear(64, num_categories)
 
-        self.bn1 = nn.BatchNorm1d(256)
-        self.bn2 = nn.BatchNorm1d(128)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.bn2 = nn.BatchNorm1d(64)
 
-        self.dp1 = nn.Dropout(p=0.2)
-        self.dp2 = nn.Dropout(p=0.2)
+        self.dp1 = nn.Dropout(p=0.4)
+        self.dp2 = nn.Dropout(p=0.4)
     
     def forward(self, x):
         x = F.relu(self.bn1(self.linear1(x)))
@@ -187,8 +187,10 @@ class PCTRankTransformer(pl.LightningModule):
         self.variances = torch.tensor(
             [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2] + 3 * [0.1]) / 100
         self.variances = torch.sqrt(self.variances).cuda()
+        self.normalizer = torch.tensor([5,5,5]+ 4*[6.3] + [1280, 720]).cuda()
 
-        self.loss = nn.BCELoss()
+
+        self.loss = nn.BCEWithLogitsLoss()
         self.sig = nn.Sigmoid()
         self.lr = lr
 
@@ -210,16 +212,16 @@ class PCTRankTransformer(pl.LightningModule):
         return x + noise
 
     def _calculate_loss(self, batch, mode="train", prog_bar=False):
-        x1, x2, y = batch
-        if mode == "train":
-            x1 = self.add_noise(x1)
-            x2 = self.add_noise(x2)
+        x1, x2, y, weights = batch
+        # if mode == "train":
+            # x1 = self.add_noise(x1)
+            # x2 = self.add_noise(x2)
         has_nan = torch.isnan(x1).any().item()
 
-        out_1 = self.model(x1)
-        out_2 = self.model(x2)
-        y_hat = self.sig(out_1 - out_2)
-        loss = self.loss(y_hat, y)
+        out_1 = self.model(x1/self.normalizer)
+        out_2 = self.model(x2/self.normalizer)
+        y_hat = out_1 - out_2
+        loss = nn.BCEWithLogitsLoss(weight=weights)(y_hat, y)
 
         self.log("%s_loss" % mode, loss)
         # self.log("%s_r2" % mode, r2)

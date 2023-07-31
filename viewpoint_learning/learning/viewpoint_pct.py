@@ -31,16 +31,16 @@ class NaivePCT(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.embedding = Embedding(73+3, 128)
+        self.embedding = Embedding(73+0-64, 128)
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
-        self.sa3 = SA(128)
-        self.sa4 = SA(128)
+        # self.sa3 = SA(128)
+        # self.sa4 = SA(128)
 
         self.linear = nn.Sequential(
-            nn.Conv1d(512, 1024, kernel_size=1, bias=False),
-            nn.BatchNorm1d(1024),
+            nn.Conv1d(256, 128, kernel_size=1, bias=False),
+            nn.BatchNorm1d(128),
             nn.LeakyReLU(negative_slope=0.2)
         )
 
@@ -58,9 +58,9 @@ class NaivePCT(nn.Module):
         
         x1 = self.sa1(x)
         x2 = self.sa2(x1)
-        x3 = self.sa3(x2)
-        x4 = self.sa4(x3)
-        x = torch.cat([x1, x2, x3, x4], dim=1)
+        # x3 = self.sa3(x2)
+        # x4 = self.sa4(x3)
+        x = torch.cat([x1, x2], dim=1)
 
         x = self.linear(x)
 
@@ -75,15 +75,15 @@ class Classification(nn.Module):
     def __init__(self, num_categories=40):
         super().__init__()
 
-        self.linear1 = nn.Linear(1024, 512, bias=False)
-        self.linear2 = nn.Linear(512, 256)
-        self.linear3 = nn.Linear(256, num_categories)
+        self.linear1 = nn.Linear(128, 128, bias=False)
+        self.linear2 = nn.Linear(128, 64)
+        self.linear3 = nn.Linear(64, num_categories)
 
-        self.bn1 = nn.BatchNorm1d(512)
-        self.bn2 = nn.BatchNorm1d(256)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.bn2 = nn.BatchNorm1d(64)
 
-        self.dp1 = nn.Dropout(p=0.2)
-        self.dp2 = nn.Dropout(p=0.2)
+        self.dp1 = nn.Dropout(p=0.4)
+        self.dp2 = nn.Dropout(p=0.4)
     
     def forward(self, x):
         x = F.relu(self.bn1(self.linear1(x)))
@@ -185,12 +185,15 @@ class PCTViewpointTransformer(pl.LightningModule):
 
         #self.acc_metric = MeanAbsoluteError()
         self.variances = torch.tensor(
-            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2] + 3 * [0.1]) / 100
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2] + 3 * [0.1]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
+
+        self.normalizer = torch.tensor([5,5,5]+ 4*[6.3] + [1280, 720]).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
     def forward(self, x):
+        x = x / self.normalizer
         return self.model(x)
 
     def configure_optimizers(self):
@@ -211,6 +214,7 @@ class PCTViewpointTransformer(pl.LightningModule):
         tokens, labels = batch
         # if mode == "train":
         #     tokens = self.add_noise(tokens)
+        tokens = tokens / self.normalizer
         has_nan = torch.isnan(tokens).any().item()
 
         logits = self.model(tokens)

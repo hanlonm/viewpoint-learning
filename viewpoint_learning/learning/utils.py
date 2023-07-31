@@ -77,7 +77,7 @@ def create_dataset(hf, environments, max_error):
 
     return histogram_data, trans_errors, e_rot
 
-def create_rank_dataset(hf, environments, max_error, num_pos=100, num_viewpoints=50 ,samples_per_point=50):
+def create_rank_dataset(hf, environments, max_error, weight_factor=5, num_pos=100, num_viewpoints=50 ,samples_per_point=50):
     histograms = []
     errors = []
     dataset = []
@@ -115,19 +115,26 @@ def create_rank_dataset(hf, environments, max_error, num_pos=100, num_viewpoints
                 
                 if errs[idx_1] < errs[idx_2]:
                     label = 1.0
-                    dataset.append((hists[idx_1], hists[idx_2], label))
-                    dataset.append((hists[idx_2], hists[idx_1], label-1.0))
+                    diff = errs[idx_2] - errs[idx_1]
+                    weight = weight_factor * diff[0]
+                    dataset.append((hists[idx_1], hists[idx_2], label, weight))
+                    dataset.append((hists[idx_2], hists[idx_1], label-1.0, weight))
                 elif errs[idx_1] > errs[idx_2]:
                     label = 0.0
-                    dataset.append((hists[idx_1], hists[idx_2], label))
-                    dataset.append((hists[idx_2], hists[idx_1], label+1.0))
+                    diff = errs[idx_1] - errs[idx_2]
+                    weight = weight_factor * diff[0]
+                    dataset.append((hists[idx_1], hists[idx_2], label, weight))
+                    dataset.append((hists[idx_2], hists[idx_1], label+1.0, weight))
+                    
                 else:
                     label = 0.5
-                    dataset.append((hists[idx_1], hists[idx_2], label))
+                    diff = 0.1
+                    weight = weight_factor * diff
+                    dataset.append((hists[idx_1], hists[idx_2], label, weight))
     
     return dataset
 
-def create_rank_trf_dataset(hf, environments, max_error, num_pos=100, num_viewpoints=50 ,samples_per_point=50):
+def create_rank_trf_dataset(hf, environments, max_error, weight_factor=5,num_pos=100, num_viewpoints=50 ,samples_per_point=50):
     inputs = []
     errors = []
     dataset = []
@@ -140,7 +147,7 @@ def create_rank_trf_dataset(hf, environments, max_error, num_pos=100, num_viewpo
         keys.sort(key=int)
         for key in keys:
             token = group[key][:]
-            
+            token = token[:,:9]
             if token.shape[0] > target_rows:
                 random_indices = np.random.choice(token.shape[0], target_rows, replace=False)
                 token = token[random_indices]
@@ -176,15 +183,23 @@ def create_rank_trf_dataset(hf, environments, max_error, num_pos=100, num_viewpo
                 
                 if errs[idx_1] < errs[idx_2]:
                     label = 1.0
-                    dataset.append((toks[idx_1], toks[idx_2], label))
-                    dataset.append((toks[idx_2], toks[idx_1], label-1.0))
+                    diff = errs[idx_2] - errs[idx_1]
+                    weight = weight_factor * diff[0]
+                    dataset.append((toks[idx_1], toks[idx_2], label, weight))
+                    dataset.append((toks[idx_2], toks[idx_1], label-1.0, weight))
                 elif errs[idx_1] > errs[idx_2]:
                     label = 0.0
-                    dataset.append((toks[idx_1], toks[idx_2], label))
-                    dataset.append((toks[idx_2], toks[idx_1], label+1.0))
+                    diff = errs[idx_1] - errs[idx_2]
+                    weight = weight_factor * diff[0]
+                    dataset.append((toks[idx_1], toks[idx_2], label, weight))
+                    dataset.append((toks[idx_2], toks[idx_1], label+1.0, weight))
+                    
                 else:
                     label = 0.5
-                    dataset.append((toks[idx_1], toks[idx_2], label))
+                    diff = 0.1
+                    weight = weight_factor * diff
+                    dataset.append((toks[idx_1], toks[idx_2], label, weight))
+                    
     
     return dataset
 
@@ -237,6 +252,7 @@ def create_variable_transformer_dataset(hf, environments, max_error):
         keys.sort(key=int)
         for key in keys:
             token = group[key][:]
+            token = token[:,:7]
             inputs.append(token)
         
     token_data = np.array(inputs, dtype="object")

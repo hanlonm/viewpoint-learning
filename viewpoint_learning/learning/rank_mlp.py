@@ -59,7 +59,7 @@ class RankMLP(pl.LightningModule):
         return out
     
     def _calculate_loss(self, batch, mode="train", prog_bar=False):
-        x1, x2, y = batch
+        x1, x2, y, weights = batch
         B, D = x1.shape
         x1: torch.Tensor = x1.unsqueeze(1)
         x1 = self.bn(self.conv1d_1(x1))
@@ -74,8 +74,8 @@ class RankMLP(pl.LightningModule):
         x2 = x2.reshape(B, -1)
         out_2 = self.model(x2)
 
-        y_hat = self.sig(out_1 - out_2)
-        loss = self.loss(y_hat, y)
+        y_hat = out_1 - out_2
+        loss = nn.BCEWithLogitsLoss(weight=weights)(y_hat, y)
         # Logging to TensorBoard by default
         self.log(f"{mode}_loss", loss, prog_bar=prog_bar)
         return loss
