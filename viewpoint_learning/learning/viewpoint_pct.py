@@ -12,6 +12,7 @@ from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim import Optimizer
 from torch import optim, nn, utils, Tensor
 from typing import Any
+import numpy as np
 
 
 
@@ -185,10 +186,10 @@ class PCTViewpointTransformer(pl.LightningModule):
 
         #self.acc_metric = MeanAbsoluteError()
         self.variances = torch.tensor(
-            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 5, 5] + 64 * [2] + 3 * [0.1]) / 10
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 2, 2]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
 
-        self.normalizer = torch.tensor([5,5,5]+ 4*[6.3] + [1280, 720]).cuda()
+        self.normalizer = torch.tensor([5,5,5]+ 4*[2*np.pi] + [1280, 720]).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 

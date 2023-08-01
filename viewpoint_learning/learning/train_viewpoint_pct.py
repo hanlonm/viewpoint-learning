@@ -29,7 +29,7 @@ print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "dino_3_10-5_16_occ_opt_norm_small_noheat"
+input_config = "10-5_16_occ_opt_norm_small_noheat_nodino"
 
 train_environments = ["00269_opt", "00067_opt", "00596_opt", "00638_opt", "00700_opt"]
 # train_environments = ["00067"]
@@ -105,7 +105,7 @@ val_loader = DataLoader(valid_set, 32, False, num_workers=8, collate_fn=pct_tran
 test_loader = DataLoader(test_dataset, 32, False, num_workers=8, collate_fn=pct_transformer_collate, pin_memory=True)
 
 checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_0", mode="max",save_weights_only=True)
-checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_idx_1", mode="max",save_weights_only=True,filename=f'best_test_{input_config}')
+checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_loss/dataloader_idx_1", mode="min",save_weights_only=True,filename=f'best_test_{input_config}')
 test_cb = TestCallback(test_loader)
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"PCT/{input_config}")
 model = PCTViewpointTransformer()
