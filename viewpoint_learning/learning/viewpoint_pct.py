@@ -178,7 +178,7 @@ class SA(nn.Module):
 
 class PCTViewpointTransformer(pl.LightningModule):
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, cam_width, cam_height, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters()
         self.model = NaivePCTCls()
@@ -189,7 +189,7 @@ class PCTViewpointTransformer(pl.LightningModule):
             [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 2, 2]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
 
-        self.normalizer = torch.tensor([5,5,5]+ 4*[2*np.pi] + [1280, 720]).cuda()
+        self.normalizer = torch.tensor([5,5,5]+ 4*[2*np.pi] + [cam_width, cam_height]).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
