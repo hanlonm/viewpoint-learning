@@ -17,10 +17,10 @@ import numpy as np
 
 
 class NaivePCTCls(nn.Module):
-    def __init__(self, num_categories=2):
+    def __init__(self, dino_dim=0, num_categories=2):
         super().__init__()
 
-        self.encoder = NaivePCT()
+        self.encoder = NaivePCT(dino_dim=dino_dim)
         self.cls = Classification(num_categories)
     
     def forward(self, x):
@@ -29,10 +29,10 @@ class NaivePCTCls(nn.Module):
         return x
 
 class NaivePCT(nn.Module):
-    def __init__(self):
+    def __init__(self, dino_dim=0):
         super().__init__()
 
-        self.embedding = Embedding(73+0-64, 128)
+        self.embedding = Embedding(73+dino_dim, 128)
 
         self.sa1 = SA(128)
         self.sa2 = SA(128)
@@ -178,18 +178,21 @@ class SA(nn.Module):
 
 class PCTViewpointTransformer(pl.LightningModule):
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, dino_dim, im_width, im_height,*args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters()
-        self.model = NaivePCTCls()
+        self.model = NaivePCTCls(dino_dim=dino_dim)
         # self.example_input_array = next(iter(train_loader))[0]
 
         #self.acc_metric = MeanAbsoluteError()
+        # self.variances = torch.tensor(
+        #     [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 2, 2] + 64 * [2] + 3 * [0.1] + 3 * [0.02]) / 10
         self.variances = torch.tensor(
-            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 2, 2]) / 10
+            [0.1, 0.1, 0.1, 0.09, 0.09, 0.09, 0.09, 2, 2] + 64*[2]) / 10
         self.variances = torch.sqrt(self.variances).cuda()
 
-        self.normalizer = torch.tensor([5,5,5]+ 4*[2*np.pi] + [1280, 720]).cuda()
+        # self.normalizer = torch.tensor([5,5,5]+ 4*[np.pi] + [1280, 720] + 64 * [10] + 3* [20]+3*[5]).cuda()
+        self.normalizer = torch.tensor( [5,5,5]+ 4*[np.pi] + [im_width, im_height] + 64 * [10] + dino_dim * [20]).cuda()
 
         self.loss = nn.CrossEntropyLoss()
 
