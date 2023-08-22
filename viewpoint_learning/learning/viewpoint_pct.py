@@ -178,6 +178,7 @@ class SA(nn.Module):
 
 class PCTViewpointTransformer(pl.LightningModule):
 
+
     def __init__(self, dino_dim, im_width, im_height,*args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.save_hyperparameters()
