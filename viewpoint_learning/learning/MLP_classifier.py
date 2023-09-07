@@ -14,25 +14,6 @@ from torchmetrics.functional import accuracy
 class ViewpointClassifier(pl.LightningModule):
     def __init__(self, input_dim):
         super().__init__()
-        # self.model = nn.Sequential(nn.Linear(input_dim, 128),
-        #                            nn.ReLU(),
-        #                            nn.BatchNorm1d(128),
-        #                            nn.Dropout(0.1),
-        #                            nn.Linear(128, 96),
-        #                            nn.ReLU(),
-        #                            nn.Linear(96,64),
-        #                         #    nn.ReLU(),
-        #                            nn.Linear(64, 64),
-        #                            nn.ReLU(),
-        #                            nn.Linear(64, 32),
-        #                            nn.ReLU(),
-        #                            nn.Dropout(0.2),
-        #                            nn.Linear(32, 16),
-        #                            nn.ReLU(),
-        #                            nn.Dropout(0.2),
-        #                            nn.Linear(16, 8),
-        #                            nn.ReLU(),
-        #                            nn.Linear(8, 2))
         self.conv1d_1 = nn.Sequential(
             nn.Conv1d(1, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),

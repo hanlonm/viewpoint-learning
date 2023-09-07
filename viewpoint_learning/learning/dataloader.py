@@ -142,6 +142,38 @@ def pct_transformer_collate(batch):
         
     return torch.stack(resampled_tensor_list, dim=0).to(torch.float32), torch.stack(labels, dim=0).to(torch.float32)
 
+def rank_transformer_collate(batch):
+    # rows_list = [tensor.size(0) for tensor, label in batch]
+    # min_rows = min(rows_list)
+    resampled_tensor_list_1 = []
+    resampled_tensor_list_2 = []
+    labels = []
+    target_rows = 1024
+    for tensor_1, tensor_2, label in batch:
+        if tensor_1.size(0) < target_rows:
+            # If tensor has fewer rows, resample with replacement
+            indices = torch.randint(0, tensor_1.size(0), (target_rows,))
+        else:
+            # If tensor has equal or more rows, resample without replacement
+            indices = torch.randperm(tensor_1.size(0))[:target_rows]
+        resampled_tensor_1 = tensor_1.index_select(0, indices)  # Resample tensor
+        if tensor_2.size(0) < target_rows:
+            # If tensor has fewer rows, resample with replacement
+            indices = torch.randint(0, tensor_2.size(0), (target_rows,))
+        else:
+            # If tensor has equal or more rows, resample without replacement
+            indices = torch.randperm(tensor_2.size(0))[:target_rows]
+        resampled_tensor_2 = tensor_2.index_select(0, indices)
+        
+        resampled_tensor_list_1.append(resampled_tensor_1)  # Add resampled tensor to the list
+        resampled_tensor_list_2.append(resampled_tensor_2)  # Add resampled tensor to the list
+        labels.append(label)
+
+    # print(torch.tensor(resampled_tensor_list))
+    # print(torch.tensor(labels))
+        
+    return torch.stack(resampled_tensor_1, dim=0).to(torch.float32), torch.stack(resampled_tensor_2, dim=0).to(torch.float32), torch.stack(labels, dim=0).to(torch.float32)
+
 class TestCallback(pl.Callback):
     def __init__(self, test_loader):
         #self.best_val_loss = float('inf')

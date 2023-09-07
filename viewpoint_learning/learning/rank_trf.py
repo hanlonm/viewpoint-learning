@@ -195,7 +195,7 @@ class PCTRankTransformer(pl.LightningModule):
         self.lr = lr
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(x / self.normalizer) 
 
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=self.lr)

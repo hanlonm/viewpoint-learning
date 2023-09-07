@@ -29,7 +29,7 @@ print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "10-5_16_occ_opt_norm_small_noheat_nodino"
+input_config = "test"
 
 train_environments = ["00269_opt", "00067_opt", "00596_opt", "00638_opt", "00700_opt"]
 # train_environments = ["00067"]
@@ -108,7 +108,7 @@ checkpoint_callback = ModelCheckpoint(save_top_k=1, monitor="val_acc/dataloader_
 checkpoint_test_callback = ModelCheckpoint(save_top_k=1, monitor="val_loss/dataloader_idx_1", mode="min",save_weights_only=True,filename=f'best_test_{input_config}')
 test_cb = TestCallback(test_loader)
 tb_logger = pl_loggers.TensorBoardLogger(save_dir=f"PCT/{input_config}")
-model = PCTViewpointTransformer(cam_width=1280, cam_height=720)
+model = PCTViewpointTransformer(dino_dim=3,im_width=1280, im_height=720)
 trainer = pl.Trainer(max_epochs=75, logger=tb_logger, callbacks=[checkpoint_callback, LearningRateMonitor("step"), checkpoint_test_callback], profiler="simple")
 trainer.logger._log_graph = True  # If True, we plot the computation graph in tensorboard
 trainer.logger._default_hp_metric = None  # Optional logging argument that we don't need
