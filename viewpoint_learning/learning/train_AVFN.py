@@ -11,15 +11,15 @@ import h5py
 import matplotlib.pyplot as plt
 from utils import normalize, standardize, create_dataset
 
-home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
+home_dir = os.environ.get("BASE_DIR", "/local/home/hanlonm")
 
 
-# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/0601_100_occ.h5", "r+")
-# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
-# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/230627_hist.h5", "r")
-# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_histograms.h5", "r")
-#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230705_dino_3_hist.h5", "r")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/opt_occ_100_50_230724.h5", "r")
+# hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/0601_100_occ.h5", "r+")
+# hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/230522_100.h5", "r+")
+# hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/230627_hist.h5", "r")
+# hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/100_50_histograms.h5", "r")
+#hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/100_50_230705_dino_3_hist.h5", "r")
+hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/opt_occ_100_50_230724.h5", "r")
 
 
 

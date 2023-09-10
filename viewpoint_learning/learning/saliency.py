@@ -12,7 +12,7 @@ model = ViewpointClassifier.load_from_checkpoint(
 model.eval()
 
 
-home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
+home_dir = os.environ.get("BASE_DIR", "/local/home/hanlonm")
 
 
 hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/230627_hist.h5", "r")

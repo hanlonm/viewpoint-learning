@@ -13,8 +13,8 @@ from torch.utils.data import ConcatDataset
 
 from utils import normalize, standardize, pre_process, remove_nan_rows, create_transformer_dataset
 
-hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_4_100.h5", "r+")
-#hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
+hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/token_test_4_100.h5", "r+")
+#hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/230522_100.h5", "r+")
 print(hf.keys())
 num_points = hf.attrs["num_points"]
 num_angles = hf.attrs["num_angles"]

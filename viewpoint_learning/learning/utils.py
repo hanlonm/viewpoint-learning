@@ -252,7 +252,7 @@ def create_variable_transformer_dataset(hf, environments, max_error):
         keys.sort(key=int)
         for key in keys:
             token = group[key][:]
-            token = token[:,:9]
+            token = token[:,:73]
             inputs.append(token)
         
     token_data = np.array(inputs, dtype="object")

@@ -9,7 +9,7 @@ from pytorch_lightning import loggers as pl_loggers
 import h5py
 
 
-hf = h5py.File("/local/home/hanlonm/mt-matthew/data/00195_HL_SPA_NN/test-2000.h5", "r")
+hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/00195_HL_SPA_NN/test-2000.h5", "r")
 print(hf.keys())
 histogram_data: np.ndarray = hf["histogram_data"][:]
 num_points = hf.attrs["num_points"]

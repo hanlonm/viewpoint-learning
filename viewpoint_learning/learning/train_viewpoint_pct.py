@@ -13,23 +13,23 @@ import os
 from utils import normalize, standardize, pre_process, remove_nan_rows, create_transformer_dataset, create_variable_transformer_dataset
 
 
-home_dir = os.environ.get("CLUSTER_HOME", "/local/home/hanlonm")
+home_dir = os.environ.get("BASE_DIR", "/local/home/hanlonm")
 
-# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/token_test_5_var.h5", "r+")
-# hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/test_new_envs_1.h5", "r+")
-#hf = h5py.File("/local/home/hanlonm/mt-matthew/data/training_data/230522_100.h5", "r+")
-# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/0612_100_new_envs.h5", "r+")
-#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230629.h5", "r")
-#hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230624.h5", "r")
-# hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/100_50_230704_dino_env_12.h5", "r")
-hf = h5py.File(str(home_dir)+"/mt-matthew/data/training_data/opt_occ_100_50_230724.h5", "r")
+# hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/token_test_5_var.h5", "r+")
+# hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/test_new_envs_1.h5", "r+")
+#hf = h5py.File("/local/home/hanlonm/active-viewpoint-selection/data/training_data/230522_100.h5", "r+")
+# hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/0612_100_new_envs.h5", "r+")
+#hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/100_50_230629.h5", "r")
+#hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/100_50_230624.h5", "r")
+# hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/100_50_230704_dino_env_12.h5", "r")
+hf = h5py.File(str(home_dir)+"/active-viewpoint-selection/data/training_data/opt_occ_100_50_230724.h5", "r")
 
 
 print(hf.keys())
 # num_points = hf.attrs["num_points"]
 # num_angles = hf.attrs["num_angles"]
 
-input_config = "10-5_16_occ_opt_norm_small_noheat_nodino"
+input_config = "10-5_16_occ_opt_norm_small"
 
 train_environments = ["00269_opt", "00067_opt", "00596_opt", "00638_opt", "00700_opt"]
 # train_environments = ["00067"]
